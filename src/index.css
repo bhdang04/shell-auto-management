@@ -34,7 +34,7 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 .bay-new { background:var(--accent); color:#1a1206; border:none; padding:11px 20px; border-radius:6px; font-weight:700; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.04em; font-size:13px; cursor:pointer; }
 
 .bay-body { min-height: calc(100vh - 76px); }
-.bay-main { padding:24px 28px; max-width:1160px; margin:0 auto; }
+.bay-main { padding:24px 40px; max-width:1800px; margin:0 auto; }
 
 .quick-actions { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px; }
 .quick-action-btn {

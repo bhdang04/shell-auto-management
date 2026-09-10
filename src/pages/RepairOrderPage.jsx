@@ -97,7 +97,7 @@ export default function RepairOrderPage() {
   }
 
   function addLine(tag) {
-    const desc = tag === "LABOR" ? "New labor line" : "New part";
+    const desc = tag === "LABOR" ? "New Labor Line" : "New Part";
     setItems((prev) => [...prev, { tag, code: "", desc, sub: "", qty: "1", price: 0, total: 0 }]);
   }
 

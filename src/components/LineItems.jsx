@@ -5,20 +5,21 @@ function money(n) {
 /**
  * LineItems
  * Props:
- *  - items: array of { tag: 'LABOR'|'PART', desc, sub, qty, price, total }
+ *  - items: array of { tag: 'LABOR'|'PART', code, desc, sub, qty, price, total }
  *  - onAddLine(tag): append a blank labor/part row
- *  - onUpdateLine(index, field, value): edit desc/qty/price on an existing row
- *  - onDeleteLine(index): remove a line item
+ *  - onUpdateLine(index, field, value): edit code/desc/qty/price on an existing row
+ *  - onDeleteLine(index): remove a row
  */
 export default function LineItems({ items, onAddLine, onUpdateLine, onDeleteLine }) {
   return (
     <>
       <div className="bay-line hd">
-        <div></div>
+        <div>Code</div>
         <div>Description</div>
         <div>Qty</div>
         <div style={{ textAlign: "right" }}>Price</div>
         <div style={{ textAlign: "right" }}>Total</div>
+        <div></div>
       </div>
 
       {items.length === 0 ? (
@@ -26,7 +27,13 @@ export default function LineItems({ items, onAddLine, onUpdateLine, onDeleteLine
       ) : (
         items.map((it, i) => (
           <div className="bay-line" key={i}>
-            <div className="tag">{it.tag}</div>
+            <div className="code">
+              <input
+                value={it.code}
+                onChange={(e) => onUpdateLine(i, "code", e.target.value)}
+                placeholder="code"
+              />
+            </div>
             <div className="desc">
               <input value={it.desc} onChange={(e) => onUpdateLine(i, "desc", e.target.value)} />
               {it.sub ? <span>{it.sub}</span> : null}
@@ -39,11 +46,11 @@ export default function LineItems({ items, onAddLine, onUpdateLine, onDeleteLine
             </div>
             <div className="num">{money(it.total)}</div>
             <button
-                className="line-delete"
-                onClick={() => onDeleteLine(i)}
-                aria-label={`Remove ${it.desc}`}
-                title="Remove line"
-              >
+              className="line-delete"
+              onClick={() => onDeleteLine(i)}
+              aria-label={`Remove ${it.desc}`}
+              title="Remove line"
+            >
               ✕
             </button>
           </div>
