@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import TopBar from "../components/TopBar";
-import Sidebar from "../components/Sidebar";
 import CustomerForm from "../components/CustomerForm";
 import VehicleForm from "../components/VehicleForm";
+// import QuickActions from "../components/QuickActions";
 import LineItems from "../components/LineItems";
 import InvoiceTotals from "../components/InvoiceTotals";
 import RepairOrderActions from "../components/RepairOrderActions";
@@ -98,7 +98,7 @@ export default function RepairOrderPage() {
 
   function addLine(tag) {
     const desc = tag === "LABOR" ? "New labor line" : "New part";
-    setItems((prev) => [...prev, { tag, desc, sub: "", qty: "1", price: 0, total: 0 }]);
+    setItems((prev) => [...prev, { tag, code: "", desc, sub: "", qty: "1", price: 0, total: 0 }]);
   }
 
   function updateLine(index, field, value) {
@@ -142,12 +142,6 @@ export default function RepairOrderPage() {
       <TopBar onNewRO={clearRO} onJumpSearch={handleJumpSearch} />
 
       <div className="bay-body">
-        <Sidebar
-          customers={customers}
-          selectedCustomerId={selectedCustomerId}
-          onSelectCustomer={selectCustomer}
-        />
-
         <div className="bay-main">
           <div className="ro-topline">
             <h2>{roHeading}</h2>
@@ -184,6 +178,9 @@ export default function RepairOrderPage() {
               }}
             />
           </div>
+
+          {/* UNCOMMENT */}
+          {/* <QuickActions /> */}
 
           <div className="bay-invoice">
             <LineItems items={items} onAddLine={addLine} onUpdateLine={updateLine} onDeleteLine={deleteLine} />
