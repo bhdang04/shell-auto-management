@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import TopBar from "../components/TopBar";
-import CustomerForm from "../components/CustomerForm";
+import CustomerForm from "../components/customer-info/CustomerForm";
 import VehicleForm from "../components/VehicleForm";
 import QuickActions from "../components/button-row/QuickActions";
 import LineItems from "../components/LineItems";
