@@ -135,6 +135,110 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 }
 .bay-line .code input::placeholder { color:var(--muted); text-transform:none; }
 
+/* --- Popup / dialog shapes --- */
+dialog.popup-modal {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0;
+  max-width: 520px;
+  width: 90vw;
+  box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  font-family: 'Inter', sans-serif;
+}
+dialog.popup-modal::backdrop {
+  background: rgba(10,9,7,.72);
+}
+.popup-header {
+  display:flex; justify-content:space-between; align-items:center;
+  padding: 16px 20px; border-bottom:1px solid var(--line); background: var(--panel2);
+}
+.popup-header h2 { font-family:'Oswald'; font-size:16px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+.close-btn { background:none; border:none; color:var(--muted); font-size:22px; line-height:1; cursor:pointer; }
+.close-btn:hover { color: var(--accent); }
+.popup-content { padding: 20px; max-height: 70vh; overflow-y: auto; }
+
+/* Compact — quick confirmations, notes, single-value entries (Note, Done, Profit) */
+.popup-modal--compact { max-width: 380px; }
+.popup-modal--compact .popup-content { padding: 18px 20px; }
+
+/* Drawer — docks to the right edge, full height; for lookup/browse flows (Parts, Labor) */
+dialog.popup-modal--drawer {
+  position: fixed; inset: 0 0 0 auto; margin: 0;
+  height: 100vh; max-width: 440px; width: 90vw;
+  border-radius: 0; border-top:none; border-right:none; border-bottom:none;
+}
+.popup-modal--drawer .popup-content { max-height: calc(100vh - 57px); }
+
+/* Console — large workspace for multi-step flows (Estimate, Schedule) */
+.popup-modal--console { max-width: 980px; width: 92vw; }
+.popup-modal--console .popup-content { max-height: 76vh; }
+
+/* --- shared content inside popups --- */
+.popup-content .field { margin-bottom: 14px; }
+.popup-content .field label { display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:5px; }
+.popup-content .field input, .popup-content .field textarea {
+  width:100%; background:var(--bg); border:1px solid var(--line); color:var(--text);
+  padding:9px 11px; border-radius:5px; font-size:13.5px; font-family:'Inter';
+}
+.popup-content .field textarea { min-height:100px; resize:vertical; }
+.popup-content .field input[readonly] { color:var(--muted); background:var(--panel2); cursor:default; }
+.btn-row { display:flex; gap:10px; margin-top:18px; }
+.btn { flex:1; padding:11px; border-radius:6px; text-align:center; font-family:'Oswald'; text-transform:uppercase; font-size:12.5px; font-weight:600; letter-spacing:.03em; cursor:pointer; border:1px solid var(--line); background:transparent; color:var(--text); }
+.btn.primary { background:var(--accent); color:#1a1206; border-color:var(--accent); }
+
+.lookup-search { margin-bottom:14px; }
+.lookup-toolbar { display:flex; gap:8px; margin-bottom:14px; }
+.lookup-search-input {
+  flex:1; background:var(--bg); border:1px solid var(--line); color:var(--text);
+  padding:9px 11px; border-radius:5px; font-size:13.5px; font-family:'Inter';
+}
+.btn-small {
+  background:var(--accent); color:#1a1206; border:none; border-radius:5px;
+  padding:0 16px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em;
+  font-size:12px; font-weight:700; cursor:pointer;
+}
+.catalog-form { background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:14px; }
+
+.lookup-list { display:flex; flex-direction:column; gap:8px; }
+.lookup-empty { font-size:12.5px; color:var(--muted); padding:10px 2px; }
+.lookup-item { display:flex; flex-direction:column; gap:7px; padding:11px 13px; background:var(--bg); border:1px solid var(--line); border-radius:6px; cursor:pointer; }
+.lookup-item:hover { border-color:var(--accent); }
+.lookup-item .li-top { display:flex; align-items:center; gap:10px; }
+.lookup-item .code { font-family:'JetBrains Mono'; font-size:11px; color:var(--accent); background:var(--accent-soft); padding:2px 7px; border-radius:4px; flex-shrink:0; }
+.lookup-item .desc { font-size:13px; flex:1; }
+.lookup-item .li-bottom { display:flex; justify-content:space-between; align-items:center; }
+.lookup-item .price { font-family:'JetBrains Mono'; font-size:11.5px; color:var(--muted); }
+.row-actions { display:flex; gap:4px; }
+.icon-btn { background:none; border:none; color:var(--muted); font-size:13px; cursor:pointer; width:24px; height:24px; border-radius:4px; display:flex; align-items:center; justify-content:center; transition: all .15s ease; }
+.icon-btn:hover { color:var(--accent); background:rgba(242,169,59,.12); }
+.icon-btn.danger:hover { color:var(--bad); background:rgba(226,84,58,.12); }
+
+.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.job-card { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:14px; cursor:pointer; }
+.job-card:hover { border-color:var(--accent); }
+.job-card .jn { font-weight:600; font-size:13.5px; margin-bottom:4px; }
+.job-card .jd { font-size:11.5px; color:var(--muted); }
+
+.profit-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); font-size:13.5px; }
+.profit-row.total { font-weight:700; font-size:16px; color:var(--accent); border-bottom:none; margin-top:6px; padding-top:12px; border-top:1px solid var(--line); }
+.profit-row .v { font-family:'JetBrains Mono'; }
+
+.console-tabs { display:flex; gap:6px; margin-bottom:18px; border-bottom:1px solid var(--line); }
+.console-tab { padding:10px 16px; font-family:'Oswald'; font-size:12.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; }
+.console-tab.on { color:var(--accent); border-color:var(--accent); }
+.console-line { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px; }
+
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:8px; }
+.cal-day { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:10px 6px; text-align:center; font-family:'JetBrains Mono'; font-size:12px; cursor:pointer; }
+.cal-day:hover { border-color:var(--accent); }
+.cal-day.busy { color:var(--muted); cursor:not-allowed; }
+.cal-day.open { color:var(--good); }
+.cal-day.on { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
+
 @media (max-width: 900px) {
   .ro-grid { grid-template-columns: 1fr; }
+  .popup-modal--drawer { max-width: 100vw; }
+  .grid-3 { grid-template-columns: 1fr 1fr; }
 }
