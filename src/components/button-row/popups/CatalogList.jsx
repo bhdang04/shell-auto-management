@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useCatalog } from "../../../context/CatalogContext"
+import { useCatalog } from "../../api/catalog";
 
 const emptyForm = { code: "", description: "", price: "" };
 
@@ -125,7 +125,7 @@ export default function CatalogList({ type, onPick }) {
               <span className="desc">{it.description}</span>
             </div>
             <div className="li-bottom">
-              <span className="price">${it.price.toFixed(2)}</span>
+              <span className="price">${Number(it.price || 0).toFixed(2)}</span>
               <span className="row-actions">
                 <button
                   className="icon-btn"

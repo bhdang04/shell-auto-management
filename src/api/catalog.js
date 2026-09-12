@@ -71,7 +71,9 @@ export function useCatalog(type) {
   const filtered = items.filter((item) => {
     if (!search.trim()) return true;
     const term = search.toLowerCase();
-    return item.code.toLowerCase().includes(term) || item.description.toLowerCase().includes(term);
+    const code = item.code || "";
+    const description = item.description || "";
+    return code.toLowerCase().includes(term) || description.toLowerCase().includes(term);
   });
 
   return {
