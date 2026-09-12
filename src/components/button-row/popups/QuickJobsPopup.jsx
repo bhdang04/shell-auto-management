@@ -1,4 +1,4 @@
-import Popup from "../Popup";
+import Popup from "../Modal";
 
 // TODO: replace with real, editable job bundles (Supabase table), each expanding
 // into a preset group of labor + part line items when picked.
