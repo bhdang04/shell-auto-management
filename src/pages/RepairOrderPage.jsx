@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import TopBar from "../components/TopBar";
-import CustomerForm from "../components/customer-info/CustomerForm";
-import VehicleForm from "../components/vehicle-info/VehicleForm";
-import QuickActions from "../components/button-row/QuickActions";
+import CustomerForm from "../components/CustomerForm";
+import VehicleForm from "../components/VehicleForm";
+import QuickActions from "../components/QuickActions";
 import LineItems from "../components/LineItems";
 import InvoiceTotals from "../components/InvoiceTotals";
 import RepairOrderActions from "../components/RepairOrderActions";
@@ -97,8 +97,25 @@ export default function RepairOrderPage() {
   }
 
   function addLine(tag) {
-    const desc = tag === "LABOR" ? "New Labor Line" : "New Part";
+    const desc = tag === "LABOR" ? "New labor line" : "New part";
     setItems((prev) => [...prev, { tag, code: "", desc, sub: "", qty: "1", price: 0, total: 0 }]);
+  }
+
+  /** Called when a row is picked in PartsPopup/LaborPopup — qty defaults to
+   *  1 and the tech adjusts it right on the ticket, same as any other line. */
+  function addLineFromCatalog(tag, catalogItem) {
+    setItems((prev) => [
+      ...prev,
+      {
+        tag,
+        code: catalogItem.code,
+        desc: catalogItem.description,
+        sub: "",
+        qty: "1",
+        price: catalogItem.price,
+        total: catalogItem.price,
+      },
+    ]);
   }
 
   function updateLine(index, field, value) {
@@ -179,7 +196,10 @@ export default function RepairOrderPage() {
             />
           </div>
 
-          <QuickActions />
+          <QuickActions
+            onAddPart={(item) => addLineFromCatalog("PART", item)}
+            onAddLabor={(item) => addLineFromCatalog("LABOR", item)}
+          />
 
           <div className="bay-invoice">
             <LineItems items={items} onAddLine={addLine} onUpdateLine={updateLine} onDeleteLine={deleteLine} />
