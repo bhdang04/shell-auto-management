@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useCatalog } from "../../hooks/useCatalog";
+import { useCatalog } from "../../../context/CatalogContext"
 
 const emptyForm = { code: "", description: "", price: "" };
 
