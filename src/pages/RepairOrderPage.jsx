@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TopBar from "../components/TopBar";
 import CustomerForm from "../components/customer-info/CustomerForm";
 import VehicleForm from "../components/vehicle-info/VehicleForm";
@@ -6,8 +6,14 @@ import QuickActions from "../components/button-row/QuickActions";
 import LineItems from "../components/LineItems";
 import InvoiceTotals from "../components/InvoiceTotals";
 import RepairOrderActions from "../components/RepairOrderActions";
-import { customers } from "../data/mockData";
 import { useCatalog } from "../api/catalog";
+import {
+  createCustomer,
+  findCustomerByLookup,
+  getCustomerWithHistory,
+  updateCustomer,
+  upsertVehicle,
+} from "../api/customers";
 
 const EMPTY_CUSTOMER = { name: "", addr: "", cityzip: "", phone1: "", phone2: "" };
 const EMPTY_VEHICLE = { label: "", specs: "", plate: "", vin: "", odo: "" };
@@ -18,18 +24,43 @@ function todayStr() {
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 }
 
+/** Turns the nested Supabase shape (customer -> vehicles -> invoices ->
+ *  line_items) into the flat { history: [...] } shape the UI expects. */
+function flattenHistory(vehicle) {
+  return (vehicle?.invoices || []).map((inv) => ({
+    num: inv.num,
+    date: inv.date,
+    status: inv.status,
+    desc: inv.line_items?.[0]?.description || "Repair order",
+    total: Number(inv.labor_total) + Number(inv.parts_total) + Number(inv.tax),
+    labor: Number(inv.labor_total),
+    parts: Number(inv.parts_total),
+    tax: Number(inv.tax),
+    items: (inv.line_items || []).map((li) => ({
+      tag: li.tag,
+      code: li.code || "",
+      desc: li.description,
+      sub: li.sub || "",
+      qty: String(li.qty),
+      price: Number(li.price),
+      total: Number(li.total),
+    })),
+  }));
+}
+
 export default function RepairOrderPage() {
   // --- Repair order state lives here, one level up from every component
-  // that needs to read or change it. Swap this for context/a store later
-  // if the tree gets deeper — the components' props won't need to change. ---
+  // that needs to read or change it. ---
   const [customer, setCustomer] = useState(EMPTY_CUSTOMER);
   const [vehicle, setVehicle] = useState(EMPTY_VEHICLE);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState(null);
   const [history, setHistory] = useState(null); // null = nobody searched yet
   const [invoiceNum, setInvoiceNum] = useState(null);
   const [invoiceDate, setInvoiceDate] = useState(todayStr());
   const [status, setStatus] = useState(null);
   const [items, setItems] = useState([]);
+  const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved" | "error"
 
   // Full parts/labor catalogs, loaded once here purely for the ticket's
   // Code-field auto-fill lookup — separate from the copies PartsPopup/
@@ -48,24 +79,31 @@ export default function RepairOrderPage() {
     setCustomer(EMPTY_CUSTOMER);
     setVehicle(EMPTY_VEHICLE);
     setSelectedCustomerId(null);
+    setSelectedVehicleId(null);
     setHistory(null);
     setInvoiceNum(null);
     setInvoiceDate(todayStr());
     setStatus(null);
     setItems([]);
+    setSaveStatus(null);
   }
 
-  function loadInvoice(c, idx) {
-    const h = c.history[idx];
+  function loadInvoiceFromHistory(h) {
     setInvoiceNum(h.num);
     setInvoiceDate(h.date);
     setStatus(h.status);
     setItems(h.items.map((it) => ({ ...it, _tax: h.tax })));
   }
 
-  function selectCustomer(c) {
-    setCustomer({ name: c.name, addr: c.addr, cityzip: c.cityzip, phone1: c.phone1, phone2: c.phone2 });
-    const v = c.vehicles[0] || {};
+  function applyFullCustomer(full) {
+    setCustomer({
+      name: full.name,
+      addr: full.addr || "",
+      cityzip: full.cityzip || "",
+      phone1: full.phone1 || "",
+      phone2: full.phone2 || "",
+    });
+    const v = full.vehicles?.[0] || {};
     setVehicle({
       label: v.label || "",
       specs: v.specs || "",
@@ -73,11 +111,14 @@ export default function RepairOrderPage() {
       vin: v.vin || "",
       odo: v.odo || "",
     });
-    setSelectedCustomerId(c.id);
-    setHistory(c.history);
+    setSelectedCustomerId(full.id);
+    setSelectedVehicleId(v.id || null);
 
-    if (c.history.length > 0) {
-      loadInvoice(c, 0);
+    const invoiceHistory = flattenHistory(v);
+    setHistory(invoiceHistory);
+
+    if (invoiceHistory.length > 0) {
+      loadInvoiceFromHistory(invoiceHistory[0]);
     } else {
       setInvoiceNum(null);
       setInvoiceDate(todayStr());
@@ -86,10 +127,30 @@ export default function RepairOrderPage() {
     }
   }
 
-  function createNewCustomer(name) {
+  /** Called when a dropdown search result is clicked — search only returns
+   *  a shallow record, so fetch the full one (with invoice history) here. */
+  async function selectCustomer(searchResult) {
+    try {
+      const full = await getCustomerWithHistory(searchResult.id);
+      applyFullCustomer(full);
+    } catch (err) {
+      console.error("Failed to load customer:", err);
+    }
+  }
+
+  async function createNewCustomer(name) {
     clearRO();
     setCustomer((prev) => ({ ...prev, name }));
-    setHistory([]);
+    try {
+      const newCustomer = await createCustomer({ name });
+      const newVehicle = await upsertVehicle(null, newCustomer.id, {});
+      setSelectedCustomerId(newCustomer.id);
+      setSelectedVehicleId(newVehicle.id);
+      setHistory([]);
+    } catch (err) {
+      console.error("Failed to create customer:", err);
+      setSaveStatus("error");
+    }
   }
 
   function handleCustomerFieldChange(field, value) {
@@ -100,14 +161,47 @@ export default function RepairOrderPage() {
     setVehicle((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handleJumpSearch(query) {
-    const q = query.toLowerCase();
-    const match = customers.find(
-      (c) =>
-        c.history.some((h) => h.num === query) ||
-        c.vehicles.some((v) => v.plate.toLowerCase() === q || v.vin.toLowerCase() === q)
-    );
-    if (match) selectCustomer(match);
+  // --- Autosave: once a customer/vehicle actually exists in Supabase,
+  // debounce field edits back up to their row so nothing gets lost. ---
+  useEffect(() => {
+    if (!selectedCustomerId) return;
+    setSaveStatus("saving");
+    const timer = setTimeout(async () => {
+      try {
+        await updateCustomer(selectedCustomerId, { ...customer });
+        setSaveStatus("saved");
+      } catch (err) {
+        console.error("Failed to save customer:", err);
+        setSaveStatus("error");
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer, selectedCustomerId]);
+
+  useEffect(() => {
+    if (!selectedVehicleId) return;
+    setSaveStatus("saving");
+    const timer = setTimeout(async () => {
+      try {
+        await upsertVehicle(selectedVehicleId, selectedCustomerId, { ...vehicle });
+        setSaveStatus("saved");
+      } catch (err) {
+        console.error("Failed to save vehicle:", err);
+        setSaveStatus("error");
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehicle, selectedVehicleId]);
+
+  async function handleJumpSearch(query) {
+    try {
+      const full = await findCustomerByLookup(query);
+      if (full) applyFullCustomer(full);
+    } catch (err) {
+      console.error("Jump search failed:", err);
+    }
   }
 
   function addLine(tag) {
@@ -193,6 +287,14 @@ export default function RepairOrderPage() {
                 <div className="l">Date</div>
                 <div className="v">{invoiceDate}</div>
               </div>
+              {saveStatus && (
+                <div className="m">
+                  <div className="l">&nbsp;</div>
+                  <div className="v" style={{ color: saveStatus === "error" ? "var(--bad)" : "var(--muted)" }}>
+                    {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Save failed"}
+                  </div>
+                </div>
+              )}
               <button className="ro-clear" onClick={clearRO}>
                 clear form
               </button>
@@ -202,7 +304,6 @@ export default function RepairOrderPage() {
           <div className="ro-grid">
             <CustomerForm
               customer={customer}
-              customers={customers}
               onFieldChange={handleCustomerFieldChange}
               onSelectCustomer={selectCustomer}
               onCreateNew={createNewCustomer}
@@ -212,8 +313,7 @@ export default function RepairOrderPage() {
               onFieldChange={handleVehicleFieldChange}
               history={history}
               onSelectInvoice={(idx) => {
-                const c = customers.find((x) => x.id === selectedCustomerId);
-                if (c) loadInvoice(c, idx);
+                if (history && history[idx]) loadInvoiceFromHistory(history[idx]);
               }}
             />
           </div>
