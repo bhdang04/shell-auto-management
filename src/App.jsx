@@ -1,6 +1,6 @@
+import Login from "./components/Login";
 import RepairOrderPage from "./pages/RepairOrderPage";
-import { CatalogProvider } from "./context/CatalogContext";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import "./index.css";
 
 function Gate() {
@@ -12,9 +12,7 @@ function Gate() {
 export default function App() {
   return (
     <AuthProvider>
-      <CatalogProvider>
-        <RepairOrderPage />
-      </CatalogProvider>
+      <Gate />
     </AuthProvider>
   );
 }
