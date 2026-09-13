@@ -1,13 +1,20 @@
 import RepairOrderPage from "./pages/RepairOrderPage";
 import { CatalogProvider } from "./context/CatalogContext";
+import { AuthProvider } from "./context/AuthContext";
 import "./index.css";
 
+function Gate() {
+  const { session, loading } = useAuth();
+  if (loading) return null;
+  return session ? <RepairOrderPage /> : <Login />;
+}
+
 export default function App() {
-  console.log("URL:", import.meta.env.VITE_SUPABASE_URL);
-  console.log("KEY starts with:", import.meta.env.VITE_SUPABASE_ANON_KEY?.slice(0, 12));
   return (
-    <CatalogProvider>
-      <RepairOrderPage />
-    </CatalogProvider>
+    <AuthProvider>
+      <CatalogProvider>
+        <RepairOrderPage />
+      </CatalogProvider>
+    </AuthProvider>
   );
 }

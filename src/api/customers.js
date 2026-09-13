@@ -88,3 +88,32 @@ export async function upsertVehicle(vehicleId, customerId, fields) {
   if (error) throw error;
   return data;
 }
+
+export async function findCustomerByLookup(query) {
+  const q = query.trim();
+  if (!q) return null;
+
+  const { data: invoiceMatch } = await supabase
+    .from("invoices")
+    .select("vehicle_id")
+    .eq("num", q)
+    .maybeSingle();
+
+  let vehicleId = invoiceMatch?.vehicle_id || null;
+
+  if (!vehicleId) {
+    const { data: vehicleMatch } = await supabase
+      .from("vehicles")
+      .select("id")
+      .or(`plate.ilike.${q},vin.ilike.${q}`)
+      .maybeSingle();
+    vehicleId = vehicleMatch?.id || null;
+  }
+
+  if (!vehicleId) return null;
+
+  const { data: vehicleRow } = await supabase.from("vehicles").select("customer_id").eq("id", vehicleId).single();
+  if (!vehicleRow) return null;
+
+  return getCustomerWithHistory(vehicleRow.customer_id);
+}

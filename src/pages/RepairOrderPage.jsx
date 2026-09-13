@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import TopBar from "../components/TopBar";
 import CustomerForm from "../components/customer-info/CustomerForm";
 import VehicleForm from "../components/vehicle-info/VehicleForm";
@@ -61,6 +61,7 @@ export default function RepairOrderPage() {
   const [status, setStatus] = useState(null);
   const [items, setItems] = useState([]);
   const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved" | "error"
+  const [dirty, setDirty] = useState(false); // true when customer/vehicle fields changed since last save
 
   // Full parts/labor catalogs, loaded once here purely for the ticket's
   // Code-field auto-fill lookup — separate from the copies PartsPopup/
@@ -86,6 +87,7 @@ export default function RepairOrderPage() {
     setStatus(null);
     setItems([]);
     setSaveStatus(null);
+    setDirty(false);
   }
 
   function loadInvoiceFromHistory(h) {
@@ -113,6 +115,7 @@ export default function RepairOrderPage() {
     });
     setSelectedCustomerId(full.id);
     setSelectedVehicleId(v.id || null);
+    setDirty(false);
 
     const invoiceHistory = flattenHistory(v);
     setHistory(invoiceHistory);
@@ -147,6 +150,7 @@ export default function RepairOrderPage() {
       setSelectedCustomerId(newCustomer.id);
       setSelectedVehicleId(newVehicle.id);
       setHistory([]);
+      setDirty(false);
     } catch (err) {
       console.error("Failed to create customer:", err);
       setSaveStatus("error");
@@ -155,45 +159,32 @@ export default function RepairOrderPage() {
 
   function handleCustomerFieldChange(field, value) {
     setCustomer((prev) => ({ ...prev, [field]: value }));
+    if (selectedCustomerId) setDirty(true);
   }
 
   function handleVehicleFieldChange(field, value) {
     setVehicle((prev) => ({ ...prev, [field]: value }));
+    if (selectedVehicleId) setDirty(true);
   }
 
-  // --- Autosave: once a customer/vehicle actually exists in Supabase,
-  // debounce field edits back up to their row so nothing gets lost. ---
-  useEffect(() => {
+  // --- Explicit save: writes the current customer/vehicle field values
+  // back to Supabase. Only does anything once a customer actually exists
+  // (created via "+ Create new customer" or loaded via search). ---
+  async function handleSaveClick() {
     if (!selectedCustomerId) return;
     setSaveStatus("saving");
-    const timer = setTimeout(async () => {
-      try {
-        await updateCustomer(selectedCustomerId, { ...customer });
-        setSaveStatus("saved");
-      } catch (err) {
-        console.error("Failed to save customer:", err);
-        setSaveStatus("error");
-      }
-    }, 600);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customer, selectedCustomerId]);
-
-  useEffect(() => {
-    if (!selectedVehicleId) return;
-    setSaveStatus("saving");
-    const timer = setTimeout(async () => {
-      try {
+    try {
+      await updateCustomer(selectedCustomerId, { ...customer });
+      if (selectedVehicleId) {
         await upsertVehicle(selectedVehicleId, selectedCustomerId, { ...vehicle });
-        setSaveStatus("saved");
-      } catch (err) {
-        console.error("Failed to save vehicle:", err);
-        setSaveStatus("error");
       }
-    }, 600);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vehicle, selectedVehicleId]);
+      setSaveStatus("saved");
+      setDirty(false);
+    } catch (err) {
+      console.error("Failed to save customer/vehicle:", err);
+      setSaveStatus("error");
+    }
+  }
 
   async function handleJumpSearch(query) {
     try {
@@ -287,13 +278,20 @@ export default function RepairOrderPage() {
                 <div className="l">Date</div>
                 <div className="v">{invoiceDate}</div>
               </div>
-              {saveStatus && (
-                <div className="m">
-                  <div className="l">&nbsp;</div>
-                  <div className="v" style={{ color: saveStatus === "error" ? "var(--bad)" : "var(--muted)" }}>
-                    {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Save failed"}
-                  </div>
-                </div>
+              {selectedCustomerId && (
+                <button
+                  className={`ro-save-btn ${saveStatus === "error" ? "error" : ""}`}
+                  onClick={handleSaveClick}
+                  disabled={saveStatus === "saving"}
+                >
+                  {saveStatus === "saving"
+                    ? "Saving..."
+                    : saveStatus === "error"
+                    ? "Save failed — retry"
+                    : dirty
+                    ? "Save"
+                    : "Saved"}
+                </button>
               )}
               <button className="ro-clear" onClick={clearRO}>
                 clear form

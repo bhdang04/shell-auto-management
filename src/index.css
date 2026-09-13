@@ -89,6 +89,13 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 .ro-meta .m .l { font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:.1em; }
 .ro-meta .m .v { font-family:'JetBrains Mono'; font-size:14px; color:var(--accent); }
 .ro-clear { font-size:12px; color:var(--muted); text-decoration:underline; cursor:pointer; background:none; border:none; font-family:'Inter'; }
+.ro-save-btn {
+  background:var(--accent); color:#1a1206; border:none; border-radius:6px;
+  padding:9px 18px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em;
+  font-size:12px; font-weight:700; cursor:pointer; transition: opacity .15s ease;
+}
+.ro-save-btn:disabled { opacity:.6; cursor:default; }
+.ro-save-btn.error { background:var(--bad); color:#fff; }
 
 .ro-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px; }
 .ro-card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px 18px; }
