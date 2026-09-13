@@ -14,7 +14,7 @@ export default function PartsPopup({ isOpen, onClose, onPick }) {
 
   return (
     <Popup isOpen={isOpen} onClose={onClose} title="Parts" variant="drawer">
-      <CatalogList tag="PART" onPick={handlePick} />
+      <CatalogList type="part" onPick={handlePick} />
     </Popup>
   );
 }
