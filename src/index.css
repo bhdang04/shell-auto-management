@@ -158,6 +158,8 @@ dialog.popup-modal::backdrop {
 .close-btn { background:none; border:none; color:var(--muted); font-size:22px; line-height:1; cursor:pointer; }
 .close-btn:hover { color: var(--accent); }
 .popup-content { padding: 20px; max-height: 70vh; overflow-y: auto; }
+.popup-error { padding: 6px 2px 2px; color: var(--muted); font-size: 13px; }
+.popup-error-detail { font-family:'JetBrains Mono'; font-size:11px; color:var(--bad); margin-top:8px; word-break:break-word; }
 
 /* Compact — quick confirmations, notes, single-value entries (Note, Done, Profit) */
 .popup-modal--compact { max-width: 380px; }
