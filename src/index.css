@@ -5,7 +5,7 @@ html, body, #root { height: 100%; }
 body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 
 /* =========================================================
-   BAY BOARD — industrial shop-floor repair order screen
+   BAY BOARD â€” industrial shop-floor repair order screen
    ========================================================= */
 .bay {
   --bg:#17140f; --panel:#211d16; --panel2:#2a251c;
@@ -202,11 +202,11 @@ dialog.popup-modal::backdrop {
 .popup-error { padding: 6px 2px 2px; color: var(--muted); font-size: 13px; }
 .popup-error-detail { font-family:'JetBrains Mono'; font-size:11px; color:var(--bad); margin-top:8px; word-break:break-word; }
 
-/* Compact — quick confirmations, notes, single-value entries (Note, Done, Profit) */
+/* Compact â€” quick confirmations, notes, single-value entries (Note, Done, Profit) */
 .popup-modal--compact { max-width: 380px; }
 .popup-modal--compact .popup-content { padding: 18px 20px; }
 
-/* Drawer — docks to the right edge, full height; for lookup/browse flows (Parts, Labor) */
+/* Drawer â€” docks to the right edge, full height; for lookup/browse flows (Parts, Labor) */
 dialog.popup-modal--drawer {
   position: fixed; inset: 0 0 0 auto; margin: 0;
   height: 100vh; max-width: 440px; width: 90vw;
@@ -214,7 +214,7 @@ dialog.popup-modal--drawer {
 }
 .popup-modal--drawer .popup-content { max-height: calc(100vh - 57px); }
 
-/* Console — large workspace for multi-step flows (Estimate, Schedule) */
+/* Console â€” large workspace for multi-step flows (Estimate, Schedule) */
 .popup-modal--console { max-width: 980px; width: 92vw; }
 .popup-modal--console .popup-content { max-height: 76vh; }
 
@@ -272,6 +272,19 @@ dialog.popup-modal--drawer {
 .console-tab { padding:10px 16px; font-family:'Oswald'; font-size:12.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; }
 .console-tab.on { color:var(--accent); border-color:var(--accent); }
 .console-line { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px; }
+
+.job-category-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.job-category-card {
+  background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:22px 14px;
+  text-align:center; font-family:'Oswald'; font-size:14px; text-transform:uppercase; letter-spacing:.03em;
+  cursor:pointer; transition: all .15s ease;
+}
+.job-category-card:hover { border-color:var(--accent); color:var(--accent); background:var(--panel2); }
+.job-back-btn {
+  background:none; border:none; color:var(--muted); font-size:12.5px; font-family:'Oswald';
+  text-transform:uppercase; letter-spacing:.03em; cursor:pointer; margin-bottom:14px; padding:0;
+}
+.job-back-btn:hover { color:var(--accent); }
 
 .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:8px; }
 .cal-day { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:10px 6px; text-align:center; font-family:'JetBrains Mono'; font-size:12px; cursor:pointer; }

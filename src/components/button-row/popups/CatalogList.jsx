@@ -6,16 +6,22 @@ const emptyForm = { code: "", description: "", price: "" };
 /**
  * CatalogList
  * Props:
- *  - type: "part" | "labor" — which slice of the catalog table to show
+ *  - type: "part" | "labor" | "job" — which slice of the catalog table to show
+ *  - category: optional — for type="job", further scopes to one category
+ *    (e.g. "Brakes") and gets attached to anything added from here
  *  - onPick(item): fired when a row is clicked (not its edit/delete buttons)
  */
-export default function CatalogList({ type, onPick }) {
+export default function CatalogList({ type, category, onPick }) {
   const { filtered, search, setSearch, loading, error, addItem, updateItem, deleteItem } = useCatalog(type);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
+
+  // useCatalog(type) already filters by type + search text — this adds the
+  // category layer on top, only relevant when a category prop is passed.
+  const scoped = category ? filtered.filter((it) => it.category === category) : filtered;
 
   function openAddForm() {
     setEditingId(null);
@@ -46,7 +52,7 @@ export default function CatalogList({ type, onPick }) {
           description: form.description,
           price: parseFloat(form.price) || 0,
         })
-      : await addItem(form);
+      : await addItem({ ...form, category });
     setSaving(false);
     if (error) {
       // Most likely a duplicate code — catalog_type_code_idx is a unique index.
@@ -117,8 +123,8 @@ export default function CatalogList({ type, onPick }) {
       <div className="lookup-list">
         {error && <div className="lookup-empty">Couldn&rsquo;t load catalog — check your Supabase connection.</div>}
         {loading && <div className="lookup-empty">Loading...</div>}
-        {!loading && !error && filtered.length === 0 && <div className="lookup-empty">No matches.</div>}
-        {filtered.map((it) => (
+        {!loading && !error && scoped.length === 0 && <div className="lookup-empty">No matches.</div>}
+        {scoped.map((it) => (
           <div className="lookup-item" key={it.id} onClick={() => onPick(it)}>
             <div className="li-top">
               <span className="code">{it.code}</span>

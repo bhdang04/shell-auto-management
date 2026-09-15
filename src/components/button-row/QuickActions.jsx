@@ -26,10 +26,11 @@ const ACTIONS = [
  * (if any) is currently open, and forwards catalog picks up to the ticket.
  *
  * Props:
- *  - onAddPart(catalogItem), onAddLabor(catalogItem): called when a row is
- *    picked in PartsPopup/LaborPopup, so the parent can insert a line item.
+ *  - onAddPart(catalogItem), onAddLabor(catalogItem), onAddJob(catalogItem):
+ *    called when a row is picked in the respective popup, so the parent
+ *    can insert a line item.
  */
-export default function QuickActions({ onAddPart, onAddLabor }) {
+export default function QuickActions({ onAddPart, onAddLabor, onAddJob }) {
   const [activePopup, setActivePopup] = useState(null);
   const close = () => setActivePopup(null);
 
@@ -45,7 +46,7 @@ export default function QuickActions({ onAddPart, onAddLabor }) {
 
       <PartsPopup isOpen={activePopup === "parts"} onClose={close} onPick={onAddPart} />
       <LaborPopup isOpen={activePopup === "labor"} onClose={close} onPick={onAddLabor} />
-      <QuickJobsPopup isOpen={activePopup === "quickJobs"} onClose={close} />
+      <QuickJobsPopup isOpen={activePopup === "quickJobs"} onClose={close} onPick={onAddJob} />
       <ProfitPopup isOpen={activePopup === "profit"} onClose={close} />
       <DonePopup isOpen={activePopup === "done"} onClose={close} />
       <NotePopup isOpen={activePopup === "note"} onClose={close} />

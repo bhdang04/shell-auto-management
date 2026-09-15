@@ -7,6 +7,7 @@ import LineItems from "../components/LineItems";
 import InvoiceTotals from "../components/InvoiceTotals";
 import RepairOrderActions from "../components/RepairOrderActions";
 import { useCatalog } from "../api/catalog";
+import { useAuth } from "../context/AuthContext";
 import {
   createCustomer,
   findCustomerByLookup,
@@ -49,6 +50,8 @@ function flattenHistory(vehicle) {
 }
 
 export default function RepairOrderPage() {
+  const { signOut } = useAuth();
+
   // --- Repair order state lives here, one level up from every component
   // that needs to read or change it. ---
   const [customer, setCustomer] = useState(EMPTY_CUSTOMER);
@@ -263,7 +266,7 @@ export default function RepairOrderPage() {
 
   return (
     <div className="bay">
-      <TopBar onNewRO={clearRO} onJumpSearch={handleJumpSearch} />
+      <TopBar onNewRO={clearRO} onJumpSearch={handleJumpSearch} onLogout={signOut} />
 
       <div className="bay-body">
         <div className="bay-main">
@@ -319,6 +322,7 @@ export default function RepairOrderPage() {
           <QuickActions
             onAddPart={(item) => addLineFromCatalog("PART", item)}
             onAddLabor={(item) => addLineFromCatalog("LABOR", item)}
+            onAddJob={(item) => addLineFromCatalog("PART", item)}
           />
 
           <div className="bay-invoice">
