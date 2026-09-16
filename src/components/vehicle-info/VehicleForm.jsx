@@ -7,11 +7,36 @@ import VehicleHistory from "./VehicleHistory";
  *  - onFieldChange(field, value): update a single vehicle field
  *  - history: passed straight through to VehicleHistory
  *  - onSelectInvoice(index): passed straight through to VehicleHistory
+ *  - vehicleCount: how many vehicles the current customer has on file
+ *  - onSwitchVehicle(): open the picker to switch to a different one
+ *  - onAddVehicle(): create a new blank vehicle for the current customer
  */
-export default function VehicleForm({ vehicle, onFieldChange, history, onSelectInvoice }) {
+export default function VehicleForm({
+  vehicle,
+  onFieldChange,
+  history,
+  onSelectInvoice,
+  vehicleCount = 0,
+  onSwitchVehicle,
+  onAddVehicle,
+}) {
   return (
     <div className="ro-card">
-      <h4>Vehicle</h4>
+      <div className="ro-card-head">
+        <h4>Vehicle</h4>
+        {vehicleCount > 0 && (
+          <div className="ro-card-actions">
+            {vehicleCount > 1 && (
+              <button className="ro-card-link" onClick={onSwitchVehicle}>
+                Switch ({vehicleCount})
+              </button>
+            )}
+            <button className="ro-card-link" onClick={onAddVehicle}>
+              + Add Vehicle
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="field-row single">
         <div className="field">

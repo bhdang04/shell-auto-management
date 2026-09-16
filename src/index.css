@@ -134,6 +134,11 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 .ro-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px; }
 .ro-card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px 18px; }
 .ro-card h4 { font-family:'Oswald'; font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin-bottom:12px; }
+.ro-card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.ro-card-head h4 { margin-bottom:0; }
+.ro-card-actions { display:flex; gap:14px; }
+.ro-card-link { background:none; border:none; color:var(--accent); font-size:11.5px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; cursor:pointer; padding:0; }
+.ro-card-link:hover { text-decoration:underline; }
 .field-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
 .field-row.single { grid-template-columns:1fr; }
 .field label { display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:5px; }
