@@ -121,7 +121,7 @@ export default function CatalogList({ type, category, onPick }) {
       )}
 
       <div className="lookup-list">
-        {error && <div className="lookup-empty">Couldn&rsquo;t load catalog — check your Supabase connection.</div>}
+        {error && <div className="lookup-empty">Couldn't load catalog — check your Supabase connection.</div>}
         {loading && <div className="lookup-empty">Loading...</div>}
         {!loading && !error && scoped.length === 0 && <div className="lookup-empty">No matches.</div>}
         {scoped.map((it) => (

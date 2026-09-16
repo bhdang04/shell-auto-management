@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Modal from "../Modal";
-import CatalogList from "./CatalogList";
+import QuickJobPicker from "./QuickJobsList";
 
 const CATEGORIES = [
   "Kit Jobs",
@@ -16,40 +16,57 @@ const CATEGORIES = [
 
 /**
  * QuickJobsPopup
- * Two levels: pick a category first (Brakes, Oil Changes, etc.), then pick
- * a specific service within it. Services are catalog rows with type="job"
- * and a matching category — reuses CatalogList for search/add/edit/delete,
- * same as Parts and Labor.
+ * Two levels:
+ *  1. Pick a category
+ *  2. Pick a quick job from Supabase
+ *
+ * QuickJobPicker handles loading/searching the quick_jobs table.
  */
 export default function QuickJobsPopup({ isOpen, onClose, onPick }) {
   const [category, setCategory] = useState(null);
 
-  function handlePick(item) {
-    if (onPick) onPick(item);
-    onClose();
+  function handlePick(lines) {
+    if (onPick) onPick(lines);
+    handleClose();
   }
 
   function handleClose() {
-    setCategory(null); // reset to the category grid for next time it opens
+    setCategory(null);
     onClose();
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={category || "Quick Jobs"} variant="console">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={category || "Quick Jobs"}
+      variant="console"
+    >
       {!category ? (
         <div className="job-category-grid">
           {CATEGORIES.map((c) => (
-            <div key={c} className="job-category-card" onClick={() => setCategory(c)}>
+            <div
+              key={c}
+              className="job-category-card"
+              onClick={() => setCategory(c)}
+            >
               {c}
             </div>
           ))}
         </div>
       ) : (
         <>
-          <button className="job-back-btn" onClick={() => setCategory(null)}>
+          <button
+            className="job-back-btn"
+            onClick={() => setCategory(null)}
+          >
             ← All Categories
           </button>
-          <CatalogList type="job" category={category} onPick={handlePick} />
+
+          <QuickJobPicker
+            category={category}
+            onPick={handlePick}
+          />
         </>
       )}
     </Modal>
