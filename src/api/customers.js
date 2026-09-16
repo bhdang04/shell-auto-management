@@ -89,6 +89,9 @@ export async function upsertVehicle(vehicleId, customerId, fields) {
   return data;
 }
 
+/** Powers TopBar's jump search â€” invoice #, license plate, or VIN.
+ *  Returns { customer, vehicleId } so the caller can select the specific
+ *  matched vehicle even if the customer has more than one on file. */
 export async function findCustomerByLookup(query) {
   const q = query.trim();
   if (!q) return null;
@@ -115,5 +118,6 @@ export async function findCustomerByLookup(query) {
   const { data: vehicleRow } = await supabase.from("vehicles").select("customer_id").eq("id", vehicleId).single();
   if (!vehicleRow) return null;
 
-  return getCustomerWithHistory(vehicleRow.customer_id);
+  const customer = await getCustomerWithHistory(vehicleRow.customer_id);
+  return { customer, vehicleId };
 }

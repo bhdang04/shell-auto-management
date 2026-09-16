@@ -86,7 +86,9 @@ export default function CustomerSearch({ nameValue, onNameChange, onSelectCustom
                   <div>
                     <div className="si-name">{c.name}</div>
                     <div className="si-veh">
-                      {c.vehicles?.[0] ? c.vehicles[0].label : "No vehicle on file"}
+                      {c.vehicles?.length
+                        ? `${c.vehicles.length} vehicle${c.vehicles.length > 1 ? "s" : ""} on file`
+                        : "No vehicle on file"}
                     </div>
                   </div>
                   <div className="si-phone">{c.phone1}</div>

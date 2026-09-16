@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import TopBar from "../components/TopBar";
 import CustomerForm from "../components/customer-info/CustomerForm";
 import VehicleForm from "../components/vehicle-info/VehicleForm";
+import VehiclePickerPopup from "../components/vehicle-info/VehiclePickerPopup";
 import QuickActions from "../components/button-row/QuickActions";
 import LineItems from "../components/LineItems";
 import InvoiceTotals from "../components/InvoiceTotals";
@@ -66,6 +67,13 @@ export default function RepairOrderPage() {
   const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved" | "error"
   const [dirty, setDirty] = useState(false); // true when customer/vehicle fields changed since last save
 
+  // When a selected customer has more than one vehicle, we hold off
+  // populating the form and show a picker instead. pendingCustomer holds
+  // the full record (with all vehicles) while the picker is up.
+  const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false);
+  const [pendingCustomer, setPendingCustomer] = useState(null);
+  const [customerVehicles, setCustomerVehicles] = useState([]); // every vehicle for the current customer
+
   // Full parts/labor catalogs, loaded once here purely for the ticket's
   // Code-field auto-fill lookup — separate from the copies PartsPopup/
   // LaborPopup load for themselves when opened.
@@ -84,6 +92,7 @@ export default function RepairOrderPage() {
     setVehicle(EMPTY_VEHICLE);
     setSelectedCustomerId(null);
     setSelectedVehicleId(null);
+    setCustomerVehicles([]);
     setHistory(null);
     setInvoiceNum(null);
     setInvoiceDate(todayStr());
@@ -100,15 +109,10 @@ export default function RepairOrderPage() {
     setItems(h.items.map((it) => ({ ...it, _tax: h.tax })));
   }
 
-  function applyFullCustomer(full) {
-    setCustomer({
-      name: full.name,
-      addr: full.addr || "",
-      cityzip: full.cityzip || "",
-      phone1: full.phone1 || "",
-      phone2: full.phone2 || "",
-    });
-    const v = full.vehicles?.[0] || {};
+  /** Loads one vehicle's fields + invoice history. Doesn't touch customer
+   *  info — used both by applyFullCustomer and by switching between an
+   *  already-selected customer's other vehicles. */
+  function switchToVehicle(v) {
     setVehicle({
       label: v.label || "",
       specs: v.specs || "",
@@ -116,7 +120,6 @@ export default function RepairOrderPage() {
       vin: v.vin || "",
       odo: v.odo || "",
     });
-    setSelectedCustomerId(full.id);
     setSelectedVehicleId(v.id || null);
     setDirty(false);
 
@@ -133,14 +136,70 @@ export default function RepairOrderPage() {
     }
   }
 
+  /** vehicleOverride: which vehicle to load. Falls back to the first one —
+   *  callers with multiple vehicles should resolve which one first (either
+   *  automatically, when there's only one, or via VehiclePickerPopup). */
+  function applyFullCustomer(full, vehicleOverride) {
+    setCustomer({
+      name: full.name,
+      addr: full.addr || "",
+      cityzip: full.cityzip || "",
+      phone1: full.phone1 || "",
+      phone2: full.phone2 || "",
+    });
+    setSelectedCustomerId(full.id);
+    const vehicles = full.vehicles || [];
+    setCustomerVehicles(vehicles);
+    switchToVehicle(vehicleOverride || vehicles[0] || {});
+  }
+
   /** Called when a dropdown search result is clicked — search only returns
-   *  a shallow record, so fetch the full one (with invoice history) here. */
+   *  a shallow record, so fetch the full one (with invoice history) here.
+   *  One vehicle: select it automatically. Multiple: show the picker and
+   *  wait for handleVehiclePicked before populating anything. */
   async function selectCustomer(searchResult) {
     try {
       const full = await getCustomerWithHistory(searchResult.id);
-      applyFullCustomer(full);
+      const vehicles = full.vehicles || [];
+      if (vehicles.length > 1) {
+        setPendingCustomer(full);
+        setVehiclePickerOpen(true);
+      } else {
+        applyFullCustomer(full);
+      }
     } catch (err) {
       console.error("Failed to load customer:", err);
+    }
+  }
+
+  /** Called when a vehicle is picked from VehiclePickerPopup. Two cases:
+   *  pendingCustomer set = this came from selectCustomer's first-time
+   *  ambiguous pick, so load customer info too. Not set = the tech clicked
+   *  "Switch" on an already-loaded customer, so just swap the vehicle. */
+  function handleVehiclePicked(vehicle) {
+    if (pendingCustomer) {
+      applyFullCustomer(pendingCustomer, vehicle);
+    } else {
+      switchToVehicle(vehicle);
+    }
+    setVehiclePickerOpen(false);
+    setPendingCustomer(null);
+  }
+
+  function handleSwitchVehicle() {
+    setVehiclePickerOpen(true);
+  }
+
+  /** Creates a new blank vehicle for the current customer and switches to it. */
+  async function handleAddVehicle() {
+    if (!selectedCustomerId) return;
+    try {
+      const newVehicle = await upsertVehicle(null, selectedCustomerId, {});
+      setCustomerVehicles((prev) => [...prev, newVehicle]);
+      switchToVehicle(newVehicle);
+    } catch (err) {
+      console.error("Failed to add vehicle:", err);
+      setSaveStatus("error");
     }
   }
 
@@ -152,6 +211,7 @@ export default function RepairOrderPage() {
       const newVehicle = await upsertVehicle(null, newCustomer.id, {});
       setSelectedCustomerId(newCustomer.id);
       setSelectedVehicleId(newVehicle.id);
+      setCustomerVehicles([newVehicle]);
       setHistory([]);
       setDirty(false);
     } catch (err) {
@@ -191,8 +251,12 @@ export default function RepairOrderPage() {
 
   async function handleJumpSearch(query) {
     try {
-      const full = await findCustomerByLookup(query);
-      if (full) applyFullCustomer(full);
+      const result = await findCustomerByLookup(query);
+      if (!result) return;
+      // The lookup already matched one specific vehicle (by plate/VIN/invoice#),
+      // so use that one directly — no need for the multi-vehicle picker here.
+      const matchedVehicle = result.customer.vehicles?.find((v) => v.id === result.vehicleId);
+      applyFullCustomer(result.customer, matchedVehicle);
     } catch (err) {
       console.error("Jump search failed:", err);
     }
@@ -200,7 +264,7 @@ export default function RepairOrderPage() {
 
   function addLine(tag) {
     const desc = tag === "LABOR" ? "New labor line" : "New part";
-    setItems((prev) => [...prev, { tag, code: "", desc, sub: "", qty: "1", price: 0, total: 0 }]);
+    setItems((prev) => [...prev, { kind: "item", tag, code: "", desc, sub: "", qty: "1", price: 0, total: 0 }]);
   }
 
   /** Called when a row is picked in PartsPopup/LaborPopup — qty defaults to
@@ -209,6 +273,7 @@ export default function RepairOrderPage() {
     setItems((prev) => [
       ...prev,
       {
+        kind: "item",
         tag,
         code: catalogItem.code,
         desc: catalogItem.description,
@@ -218,6 +283,34 @@ export default function RepairOrderPage() {
         total: catalogItem.price,
       },
     ]);
+  }
+
+  /** Called when a Quick Job is picked — unlike Parts/Labor, this expands
+   *  into MULTIPLE ticket lines at once: some priced, some left blank for
+   *  manual entry (qty/price null in the template), plus freeform comment
+   *  lines with no code or price at all. */
+  function addLinesFromJob(lines) {
+    const mapped = lines.map((l) => {
+      if (l.kind === "comment") {
+        return { kind: "comment", tag: null, code: "", desc: l.description, sub: "", qty: "", price: "", total: 0 };
+      }
+      const hasQty = l.qty !== null && l.qty !== undefined;
+      const hasPrice = l.price !== null && l.price !== undefined;
+      const qty = hasQty ? String(l.qty) : "";
+      const price = hasPrice ? Number(l.price) : "";
+      const total = hasQty && hasPrice ? parseFloat(qty) * Number(price) : 0;
+      return {
+        kind: "item",
+        tag: l.tag,
+        code: l.code || "",
+        desc: l.description,
+        sub: "",
+        qty,
+        price,
+        total,
+      };
+    });
+    setItems((prev) => [...prev, ...mapped]);
   }
 
   function updateLine(index, field, value) {
@@ -268,6 +361,16 @@ export default function RepairOrderPage() {
     <div className="bay">
       <TopBar onNewRO={clearRO} onJumpSearch={handleJumpSearch} onLogout={signOut} />
 
+      <VehiclePickerPopup
+        isOpen={vehiclePickerOpen}
+        onClose={() => {
+          setVehiclePickerOpen(false);
+          setPendingCustomer(null);
+        }}
+        vehicles={pendingCustomer?.vehicles || customerVehicles}
+        onSelect={handleVehiclePicked}
+      />
+
       <div className="bay-body">
         <div className="bay-main">
           <div className="ro-topline">
@@ -316,13 +419,16 @@ export default function RepairOrderPage() {
               onSelectInvoice={(idx) => {
                 if (history && history[idx]) loadInvoiceFromHistory(history[idx]);
               }}
+              vehicleCount={customerVehicles.length}
+              onSwitchVehicle={handleSwitchVehicle}
+              onAddVehicle={handleAddVehicle}
             />
           </div>
 
           <QuickActions
             onAddPart={(item) => addLineFromCatalog("PART", item)}
             onAddLabor={(item) => addLineFromCatalog("LABOR", item)}
-            onAddJob={(item) => addLineFromCatalog("PART", item)}
+            onAddJob={addLinesFromJob}
           />
 
           <div className="bay-invoice">

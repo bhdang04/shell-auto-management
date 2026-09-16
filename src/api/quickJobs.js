@@ -54,5 +54,26 @@ export function useQuickJobs(category) {
 }
 
 export async function getQuickJobLines(jobId) {
-  // We'll fill this in based on your actual quick-job line table.
+  const { data, error } = await supabase
+    .from("quick_job_lines")
+    .select(`
+      id,
+      quick_job_id,
+      sort_order,
+      kind,
+      tag,
+      code,
+      description,
+      qty,
+      price
+    `)
+    .eq("quick_job_id", jobId)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching quick job lines:", error);
+    throw error;
+  }
+
+  return data || [];
 }

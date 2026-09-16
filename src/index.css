@@ -5,7 +5,7 @@ html, body, #root { height: 100%; }
 body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 
 /* =========================================================
-   BAY BOARD â€” industrial shop-floor repair order screen
+   BAY BOARD — industrial shop-floor repair order screen
    ========================================================= */
 .bay {
   --bg:#17140f; --panel:#211d16; --panel2:#2a251c;
@@ -176,6 +176,9 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 }
 .bay-line .code input::placeholder { color:var(--muted); text-transform:none; }
 
+.bay-line.comment-line { grid-template-columns: 1fr 28px; }
+.comment-text { font-size:12.5px; color:var(--muted); font-style:italic; line-height:1.5; }
+
 /* --- Popup / dialog shapes --- */
 dialog.popup-modal {
   background: var(--panel);
@@ -185,6 +188,7 @@ dialog.popup-modal {
   padding: 0;
   max-width: 520px;
   width: 90vw;
+  margin: auto;
   box-shadow: 0 24px 60px rgba(0,0,0,.55);
   font-family: 'Inter', sans-serif;
 }
@@ -202,11 +206,11 @@ dialog.popup-modal::backdrop {
 .popup-error { padding: 6px 2px 2px; color: var(--muted); font-size: 13px; }
 .popup-error-detail { font-family:'JetBrains Mono'; font-size:11px; color:var(--bad); margin-top:8px; word-break:break-word; }
 
-/* Compact â€” quick confirmations, notes, single-value entries (Note, Done, Profit) */
+/* Compact — quick confirmations, notes, single-value entries (Note, Done, Profit) */
 .popup-modal--compact { max-width: 380px; }
 .popup-modal--compact .popup-content { padding: 18px 20px; }
 
-/* Drawer â€” docks to the right edge, full height; for lookup/browse flows (Parts, Labor) */
+/* Drawer — docks to the right edge, full height; for lookup/browse flows (Parts, Labor) */
 dialog.popup-modal--drawer {
   position: fixed; inset: 0 0 0 auto; margin: 0;
   height: 100vh; max-width: 440px; width: 90vw;
@@ -214,7 +218,7 @@ dialog.popup-modal--drawer {
 }
 .popup-modal--drawer .popup-content { max-height: calc(100vh - 57px); }
 
-/* Console â€” large workspace for multi-step flows (Estimate, Schedule) */
+/* Console — large workspace for multi-step flows (Estimate, Schedule) */
 .popup-modal--console { max-width: 980px; width: 92vw; }
 .popup-modal--console .popup-content { max-height: 76vh; }
 
