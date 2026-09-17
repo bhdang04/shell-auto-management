@@ -89,12 +89,13 @@ export async function upsertVehicle(vehicleId, customerId, fields) {
   return data;
 }
 
-/** Powers TopBar's jump search â€” invoice #, license plate, or VIN.
+/** Powers TopBar's jump search — invoice #, license plate, or VIN.
  *  Returns { customer, vehicleId } so the caller can select the specific
  *  matched vehicle even if the customer has more than one on file. */
 export async function findCustomerByLookup(query) {
-  const q = query.trim();
+  let q = query.trim();
   if (!q) return null;
+  if (q.startsWith("#")) q = q.slice(1).trim(); // "#13839" should match the same as "13839"
 
   const { data: invoiceMatch } = await supabase
     .from("invoices")
@@ -105,10 +106,14 @@ export async function findCustomerByLookup(query) {
   let vehicleId = invoiceMatch?.vehicle_id || null;
 
   if (!vehicleId) {
+    // Partial match — a tech usually remembers part of a plate/VIN, not all
+    // of it. .limit(1) is required here: without it, .maybeSingle() throws
+    // if the partial match happens to hit more than one row.
     const { data: vehicleMatch } = await supabase
       .from("vehicles")
       .select("id")
-      .or(`plate.ilike.${q},vin.ilike.${q}`)
+      .or(`plate.ilike.%${q}%,vin.ilike.%${q}%`)
+      .limit(1)
       .maybeSingle();
     vehicleId = vehicleMatch?.id || null;
   }

@@ -276,13 +276,15 @@ export default function RepairOrderPage() {
   async function handleJumpSearch(query) {
     try {
       const result = await findCustomerByLookup(query);
-      if (!result) return;
+      if (!result) return false;
       // The lookup already matched one specific vehicle (by plate/VIN/invoice#),
       // so use that one directly — no need for the multi-vehicle picker here.
       const matchedVehicle = result.customer.vehicles?.find((v) => v.id === result.vehicleId);
       applyFullCustomer(result.customer, matchedVehicle);
+      return true;
     } catch (err) {
       console.error("Jump search failed:", err);
+      return false;
     }
   }
 
