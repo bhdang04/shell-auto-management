@@ -44,6 +44,8 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
   font-size:12.5px; padding:8px 12px; border-radius:6px; z-index:50;
 }
 .bay-new { background:var(--accent); color:#1a1206; border:none; padding:11px 20px; border-radius:6px; font-weight:700; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.04em; font-size:13px; cursor:pointer; }
+.bay-open-invoices { background:none; border:1px solid var(--line); color:var(--text); padding:11px 16px; border-radius:6px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; font-size:12px; cursor:pointer; margin-left:10px; }
+.bay-open-invoices:hover { border-color:var(--accent); color:var(--accent); }
 .bay-logout { background:none; border:1px solid var(--line); color:var(--muted); padding:11px 16px; border-radius:6px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; font-size:12px; cursor:pointer; margin-left:10px; }
 .bay-logout:hover { border-color:var(--bad); color:var(--bad); }
 

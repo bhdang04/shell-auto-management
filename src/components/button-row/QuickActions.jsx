@@ -29,8 +29,9 @@ const ACTIONS = [
  *  - onAddPart(catalogItem), onAddLabor(catalogItem), onAddJob(catalogItem):
  *    called when a row is picked in the respective popup, so the parent
  *    can insert a line item.
+ *  - onMarkDone(): called when "Mark as Done" is confirmed.
  */
-export default function QuickActions({ onAddPart, onAddLabor, onAddJob }) {
+export default function QuickActions({ onAddPart, onAddLabor, onAddJob, onMarkDone }) {
   const [activePopup, setActivePopup] = useState(null);
   const close = () => setActivePopup(null);
 
@@ -48,7 +49,7 @@ export default function QuickActions({ onAddPart, onAddLabor, onAddJob }) {
       <LaborPopup isOpen={activePopup === "labor"} onClose={close} onPick={onAddLabor} />
       <QuickJobsPopup isOpen={activePopup === "quickJobs"} onClose={close} onPick={onAddJob} />
       <ProfitPopup isOpen={activePopup === "profit"} onClose={close} />
-      <DonePopup isOpen={activePopup === "done"} onClose={close} />
+      <DonePopup isOpen={activePopup === "done"} onClose={close} onConfirm={onMarkDone} />
       <NotePopup isOpen={activePopup === "note"} onClose={close} />
       <EstimatePopup isOpen={activePopup === "estimate"} onClose={close} />
       <SchedulePopup isOpen={activePopup === "schedule"} onClose={close} />

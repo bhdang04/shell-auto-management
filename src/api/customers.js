@@ -43,16 +43,17 @@ export async function getCustomerWithHistory(customerId) {
 }
 
 /** "Today's board" in the sidebar: customers with at least one open invoice. */
+/** "Open Invoices" panel: every invoice not yet closed out, shop-wide. */
 export async function getOpenBoard() {
   const { data, error } = await supabase
     .from("invoices")
     .select(
       `
-      id, num, status, labor_total, parts_total, tax,
+      id, num, date, status, labor_total, parts_total, tax,
       vehicles ( id, label, customer_id, customers ( id, name ) )
     `
     )
-    .neq("status", "Paid")
+    .not("status", "in", '("Ready for Pickup","Paid")')
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data;

@@ -3,6 +3,7 @@ import TopBar from "../components/TopBar";
 import CustomerForm from "../components/customer-info/CustomerForm";
 import VehicleForm from "../components/vehicle-info/VehicleForm";
 import VehiclePickerPopup from "../components/vehicle-info/VehiclePickerPopup";
+import OpenInvoicesPopup from "../components/OpenInvoicesPopup";
 import QuickActions from "../components/button-row/QuickActions";
 import LineItems from "../components/LineItems";
 import InvoiceTotals from "../components/InvoiceTotals";
@@ -17,8 +18,12 @@ import {
   upsertVehicle,
 } from "../api/customers";
 import { saveInvoice } from "../api/invoices";
+import { printInvoiceReceipt } from "../lib/printInvoice";
 
 const EMPTY_CUSTOMER = { name: "", addr: "", cityzip: "", phone1: "", phone2: "" };
+// Selecting a vehicle whose most recent invoice has one of these statuses
+// starts a fresh ticket instead of reopening the closed one.
+const CLOSED_STATUSES = ["Ready for Pickup", "Paid"];
 const EMPTY_VEHICLE = { label: "", specs: "", plate: "", vin: "", odo: "" };
 const DEFAULT_TAX_RATE = 0.0625; // used only for brand-new, manually-built invoices
 
@@ -96,7 +101,8 @@ export default function RepairOrderPage() {
   // the full record (with all vehicles) while the picker is up.
   const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false);
   const [pendingCustomer, setPendingCustomer] = useState(null);
-  const [customerVehicles, setCustomerVehicles] = useState([]); // every vehicle for the current customer
+  const [customerVehicles, setCustomerVehicles] = useState([]);
+  const [openInvoicesOpen, setOpenInvoicesOpen] = useState(false); // every vehicle for the current customer
 
   // Full parts/labor catalogs, loaded once here purely for the ticket's
   // Code-field auto-fill lookup — separate from the copies PartsPopup/
@@ -157,9 +163,14 @@ export default function RepairOrderPage() {
     const invoiceHistory = flattenHistory(v);
     setHistory(invoiceHistory);
 
-    if (invoiceHistory.length > 0) {
+    const latest = invoiceHistory[0];
+    if (latest && !CLOSED_STATUSES.includes(latest.status)) {
       loadInvoiceFromHistory(0, invoiceHistory);
     } else {
+      // No invoices yet, or the most recent one is already closed out —
+      // either way, start blank rather than reopening a finished job.
+      // The old invoice is still one click away via the ‹ › arrows or
+      // Vehicle History, just not auto-loaded.
       setHistoryIndex(null);
       setInvoiceId(null);
       setInvoiceNum(null);
@@ -221,6 +232,84 @@ export default function RepairOrderPage() {
 
   function handleSwitchVehicle() {
     setVehiclePickerOpen(true);
+  }
+
+  /** Called when a row is picked in OpenInvoicesPopup — this jumps to one
+   *  SPECIFIC invoice, unlike selectCustomer which loads whatever's most
+   *  recent. Needed because a vehicle could have more than one invoice and
+   *  we want exactly the one that was clicked, not just "the latest open one". */
+  async function loadInvoiceById(row) {
+    try {
+      const customerId = row.vehicles.customer_id;
+      const full = await getCustomerWithHistory(customerId);
+      setCustomer({
+        name: full.name,
+        addr: full.addr || "",
+        cityzip: full.cityzip || "",
+        phone1: full.phone1 || "",
+        phone2: full.phone2 || "",
+      });
+      setSelectedCustomerId(full.id);
+      const vehicles = full.vehicles || [];
+      setCustomerVehicles(vehicles);
+      const matchedVehicle = vehicles.find((v) => v.id === row.vehicles.id) || vehicles[0];
+      setVehicle({
+        label: matchedVehicle.label || "",
+        specs: matchedVehicle.specs || "",
+        plate: matchedVehicle.plate || "",
+        vin: matchedVehicle.vin || "",
+        odo: matchedVehicle.odo || "",
+      });
+      setSelectedVehicleId(matchedVehicle.id);
+      setDirty(false);
+
+      const freshHistory = flattenHistory(matchedVehicle);
+      setHistory(freshHistory);
+      const idx = freshHistory.findIndex((h) => h.id === row.id);
+      if (idx >= 0) loadInvoiceFromHistory(idx, freshHistory);
+    } catch (err) {
+      console.error("Failed to load invoice:", err);
+    }
+  }
+
+  /** Marks the current ticket closed. If it's already saved, persists the
+   *  status right away; if not, the new status just rides along next time
+   *  Save Invoice is clicked. Either way, selecting this vehicle again later
+   *  will now start a fresh ticket instead of reopening this one. */
+  /** Marks the current ticket closed AND saves it — "Done" should finalize
+   *  the invoice for real, not just flip a status flag on something that
+   *  might not even be saved yet. Reuses the same saveInvoice path as the
+   *  Save Invoice button, just forcing the closed status. */
+  async function handleMarkDone() {
+    const closedStatus = "Ready for Pickup";
+    setStatus(closedStatus);
+    if (!selectedVehicleId) return;
+    setInvoiceSaving(true);
+    try {
+      const saved = await saveInvoice({
+        invoiceId,
+        vehicleId: selectedVehicleId,
+        status: closedStatus,
+        items,
+        laborTotal: totals.labor,
+        partsTotal: totals.parts,
+        tax: totals.tax,
+      });
+
+      const full = await getCustomerWithHistory(selectedCustomerId);
+      const freshVehicles = full.vehicles || [];
+      setCustomerVehicles(freshVehicles);
+      const freshVehicle = freshVehicles.find((v) => v.id === selectedVehicleId);
+      const freshHistory = flattenHistory(freshVehicle);
+      setHistory(freshHistory);
+
+      const idx = freshHistory.findIndex((h) => h.id === saved.id);
+      if (idx >= 0) loadInvoiceFromHistory(idx, freshHistory);
+    } catch (err) {
+      console.error("Failed to finalize invoice:", err);
+      setSaveStatus("error");
+    }
+    setInvoiceSaving(false);
   }
 
   /** Creates a new blank vehicle for the current customer and switches to it. */
@@ -432,11 +521,12 @@ export default function RepairOrderPage() {
   }
 
   // history is sorted newest-first, so "previous" (older) moves to a
-  // higher index, "next" (newer) moves to a lower one.
+  // higher index, "next" (newer) moves to a lower one. historyIndex===null
+  // (the fresh-ticket state) means "start browsing from the most recent".
   function goToPreviousInvoice() {
-    if (history && historyIndex !== null && historyIndex < history.length - 1) {
-      loadInvoiceFromHistory(historyIndex + 1);
-    }
+    if (!history || history.length === 0) return;
+    const nextIdx = historyIndex === null ? 0 : historyIndex + 1;
+    if (nextIdx < history.length) loadInvoiceFromHistory(nextIdx);
   }
   function goToNextInvoice() {
     if (history && historyIndex !== null && historyIndex > 0) {
@@ -452,7 +542,12 @@ export default function RepairOrderPage() {
 
   return (
     <div className="bay">
-      <TopBar onNewRO={clearRO} onJumpSearch={handleJumpSearch} onLogout={signOut} />
+      <TopBar
+        onNewRO={clearRO}
+        onJumpSearch={handleJumpSearch}
+        onShowOpenInvoices={() => setOpenInvoicesOpen(true)}
+        onLogout={signOut}
+      />
 
       <VehiclePickerPopup
         isOpen={vehiclePickerOpen}
@@ -462,6 +557,12 @@ export default function RepairOrderPage() {
         }}
         vehicles={pendingCustomer?.vehicles || customerVehicles}
         onSelect={handleVehiclePicked}
+      />
+
+      <OpenInvoicesPopup
+        isOpen={openInvoicesOpen}
+        onClose={() => setOpenInvoicesOpen(false)}
+        onSelect={loadInvoiceById}
       />
 
       <div className="bay-body">
@@ -475,7 +576,9 @@ export default function RepairOrderPage() {
                   <button
                     className="invoice-arrow"
                     onClick={goToPreviousInvoice}
-                    disabled={!history || historyIndex === null || historyIndex >= history.length - 1}
+                    disabled={
+                      !history || history.length === 0 || (historyIndex !== null && historyIndex >= history.length - 1)
+                    }
                     title="Previous invoice"
                   >
                     ‹
@@ -568,6 +671,12 @@ export default function RepairOrderPage() {
             onAddPart={(item) => addLineFromCatalog("PART", item)}
             onAddLabor={(item) => addLineFromCatalog("LABOR", item)}
             onAddJob={addLinesFromJob}
+            onMarkDone={handleMarkDone}
+            items={items}
+            totals={totals}
+            vehicleId={selectedVehicleId}
+            customerId={selectedCustomerId}
+            vehicleLabel={vehicle.label}
           />
 
           <div className="bay-invoice">
@@ -575,7 +684,9 @@ export default function RepairOrderPage() {
             <InvoiceTotals {...totals} />
             <RepairOrderActions
               disabled={items.length === 0}
-              onPrint={() => window.print()}
+              onPrint={() =>
+                printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer, vehicle, items, totals })
+              }
               onText={() => alert("Text to customer — wire up an SMS provider here")}
               onPay={() => alert("Take payment — wire up a payment provider here")}
             />
