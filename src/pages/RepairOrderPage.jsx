@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TopBar from "../components/TopBar";
 import CustomerForm from "../components/customer-info/CustomerForm";
 import VehicleForm from "../components/vehicle-info/VehicleForm";
@@ -81,6 +81,15 @@ export default function RepairOrderPage() {
   const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved" | "error"
   const [dirty, setDirty] = useState(false); // true when customer/vehicle fields changed since last save
   const [invoiceSaving, setInvoiceSaving] = useState(false);
+  const [invoiceInput, setInvoiceInput] = useState(""); // what's typed in the invoice # field
+  const [invoiceLookupStatus, setInvoiceLookupStatus] = useState(null); // null | "searching" | "notfound"
+
+  // Keep the editable field in sync whenever the loaded invoice changes for
+  // any other reason (arrows, search, picking a customer, clearing).
+  useEffect(() => {
+    setInvoiceInput(invoiceNum || "");
+    setInvoiceLookupStatus(null);
+  }, [invoiceNum]);
 
   // When a selected customer has more than one vehicle, we hold off
   // populating the form and show a picker instead. pendingCustomer holds
@@ -288,6 +297,17 @@ export default function RepairOrderPage() {
     }
   }
 
+  /** Typing a number directly into the invoice # field and hitting Enter/blur
+   *  jumps straight to that invoice — same lookup as the top search bar. */
+  async function handleInvoiceNumberJump() {
+    const q = String(invoiceInput).trim();
+    if (!q || q === String(invoiceNum || "")) return;
+    setInvoiceLookupStatus("searching");
+    const found = await handleJumpSearch(q);
+    if (!found) setInvoiceLookupStatus("notfound");
+    // on success, invoiceNum changes -> the useEffect above resyncs invoiceInput and clears status
+  }
+
   function addLine(tag) {
     const desc = tag === "LABOR" ? "New labor line" : "New part";
     setItems((prev) => [...prev, { kind: "item", tag, code: "", desc, sub: "", qty: "1", price: 0, total: 0 }]);
@@ -460,7 +480,23 @@ export default function RepairOrderPage() {
                   >
                     ‹
                   </button>
-                  <span>{invoiceNum ? `#${invoiceNum}` : "— new —"}</span>
+                  <div className="invoice-num-wrap">
+                    {invoiceInput && <span className="invoice-hash">#</span>}
+                    <input
+                      className="invoice-num-input"
+                      value={invoiceInput}
+                      onChange={(e) => setInvoiceInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.target.blur();
+                          handleInvoiceNumberJump();
+                        }
+                      }}
+                      onBlur={handleInvoiceNumberJump}
+                      placeholder="new"
+                      size={invoiceInput ? invoiceInput.length : 3}
+                    />
+                  </div>
                   <button
                     className="invoice-arrow"
                     onClick={goToNextInvoice}
@@ -469,6 +505,9 @@ export default function RepairOrderPage() {
                   >
                     ›
                   </button>
+                  {invoiceLookupStatus === "notfound" && (
+                    <span className="invoice-not-found">No match</span>
+                  )}
                 </div>
               </div>
               <div className="m">

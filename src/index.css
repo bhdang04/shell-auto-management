@@ -142,6 +142,15 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 }
 .invoice-arrow:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
 .invoice-arrow:disabled { opacity:.3; cursor:default; }
+.invoice-num-wrap { display:flex; align-items:center; gap:2px; }
+.invoice-hash { font-family:'JetBrains Mono'; font-size:14px; color:var(--accent); }
+.invoice-num-input {
+  background:none; border:none; border-bottom:1px dashed transparent; color:var(--accent);
+  font-family:'JetBrains Mono'; font-size:14px; padding:0 2px; min-width:20px;
+}
+.invoice-num-input:hover, .invoice-num-input:focus { border-bottom-color:var(--accent); outline:none; }
+.invoice-num-input::placeholder { color:var(--muted); font-family:'Inter'; font-style:italic; }
+.invoice-not-found { font-size:11px; color:var(--bad); font-family:'Inter'; white-space:nowrap; }
 .ro-clear { font-size:12px; color:var(--muted); text-decoration:underline; cursor:pointer; background:none; border:none; font-family:'Inter'; }
 .ro-save-btn {
   background:var(--accent); color:#1a1206; border:none; border-radius:6px;
