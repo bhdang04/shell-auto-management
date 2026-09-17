@@ -122,6 +122,14 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 .ro-meta .m { text-align:right; }
 .ro-meta .m .l { font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:.1em; }
 .ro-meta .m .v { font-family:'JetBrains Mono'; font-size:14px; color:var(--accent); }
+.invoice-nav { display:flex; align-items:center; gap:6px; }
+.invoice-arrow {
+  background:none; border:1px solid var(--line); color:var(--muted); cursor:pointer;
+  width:20px; height:20px; border-radius:4px; display:flex; align-items:center; justify-content:center;
+  font-size:14px; line-height:1; padding:0;
+}
+.invoice-arrow:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+.invoice-arrow:disabled { opacity:.3; cursor:default; }
 .ro-clear { font-size:12px; color:var(--muted); text-decoration:underline; cursor:pointer; background:none; border:none; font-family:'Inter'; }
 .ro-save-btn {
   background:var(--accent); color:#1a1206; border:none; border-radius:6px;

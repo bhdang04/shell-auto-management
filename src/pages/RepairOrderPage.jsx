@@ -16,6 +16,7 @@ import {
   updateCustomer,
   upsertVehicle,
 } from "../api/customers";
+import { saveInvoice } from "../api/invoices";
 
 const EMPTY_CUSTOMER = { name: "", addr: "", cityzip: "", phone1: "", phone2: "" };
 const EMPTY_VEHICLE = { label: "", specs: "", plate: "", vin: "", odo: "" };
@@ -27,9 +28,11 @@ function todayStr() {
 }
 
 /** Turns the nested Supabase shape (customer -> vehicles -> invoices ->
- *  line_items) into the flat { history: [...] } shape the UI expects. */
+ *  line_items) into the flat { history: [...] } shape the UI expects.
+ *  Sorted newest-first so the arrow navigation has a stable order. */
 function flattenHistory(vehicle) {
-  return (vehicle?.invoices || []).map((inv) => ({
+  const list = (vehicle?.invoices || []).map((inv) => ({
+    id: inv.id,
     num: inv.num,
     date: inv.date,
     status: inv.status,
@@ -38,16 +41,25 @@ function flattenHistory(vehicle) {
     labor: Number(inv.labor_total),
     parts: Number(inv.parts_total),
     tax: Number(inv.tax),
-    items: (inv.line_items || []).map((li) => ({
-      tag: li.tag,
-      code: li.code || "",
-      desc: li.description,
-      sub: li.sub || "",
-      qty: String(li.qty),
-      price: Number(li.price),
-      total: Number(li.total),
-    })),
+    items: (inv.line_items || [])
+      .slice()
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+      .map((li) =>
+        li.kind === "comment"
+          ? { kind: "comment", tag: null, code: "", desc: li.description, sub: "", qty: "", price: "", total: 0 }
+          : {
+              kind: "item",
+              tag: li.tag,
+              code: li.code || "",
+              desc: li.description,
+              sub: li.sub || "",
+              qty: li.qty === null ? "" : String(li.qty),
+              price: li.price === null ? "" : Number(li.price),
+              total: li.total === null ? 0 : Number(li.total),
+            }
+      ),
   }));
+  return list.sort((a, b) => Number(b.num) - Number(a.num));
 }
 
 export default function RepairOrderPage() {
@@ -60,12 +72,15 @@ export default function RepairOrderPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
   const [history, setHistory] = useState(null); // null = nobody searched yet
+  const [historyIndex, setHistoryIndex] = useState(null); // position within history[] for the arrows
+  const [invoiceId, setInvoiceId] = useState(null); // real DB id — null means unsaved
   const [invoiceNum, setInvoiceNum] = useState(null);
   const [invoiceDate, setInvoiceDate] = useState(todayStr());
   const [status, setStatus] = useState(null);
   const [items, setItems] = useState([]);
   const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved" | "error"
   const [dirty, setDirty] = useState(false); // true when customer/vehicle fields changed since last save
+  const [invoiceSaving, setInvoiceSaving] = useState(false);
 
   // When a selected customer has more than one vehicle, we hold off
   // populating the form and show a picker instead. pendingCustomer holds
@@ -94,6 +109,8 @@ export default function RepairOrderPage() {
     setSelectedVehicleId(null);
     setCustomerVehicles([]);
     setHistory(null);
+    setHistoryIndex(null);
+    setInvoiceId(null);
     setInvoiceNum(null);
     setInvoiceDate(todayStr());
     setStatus(null);
@@ -102,7 +119,12 @@ export default function RepairOrderPage() {
     setDirty(false);
   }
 
-  function loadInvoiceFromHistory(h) {
+  function loadInvoiceFromHistory(idx, historyList) {
+    const list = historyList || history;
+    const h = list?.[idx];
+    if (!h) return;
+    setHistoryIndex(idx);
+    setInvoiceId(h.id);
     setInvoiceNum(h.num);
     setInvoiceDate(h.date);
     setStatus(h.status);
@@ -127,8 +149,10 @@ export default function RepairOrderPage() {
     setHistory(invoiceHistory);
 
     if (invoiceHistory.length > 0) {
-      loadInvoiceFromHistory(invoiceHistory[0]);
+      loadInvoiceFromHistory(0, invoiceHistory);
     } else {
+      setHistoryIndex(null);
+      setInvoiceId(null);
       setInvoiceNum(null);
       setInvoiceDate(todayStr());
       setStatus(null);
@@ -351,6 +375,53 @@ export default function RepairOrderPage() {
     return { labor, parts, tax, due: labor + parts + tax };
   }, [items]);
 
+  /** Saves the current ticket to Supabase — creates the invoice if this is
+   *  a new one, otherwise updates it, then fully replaces its line items.
+   *  Afterward, refetches the vehicle so `history` picks up the new/updated
+   *  invoice and the arrows have something real to navigate. */
+  async function handleSaveInvoiceClick() {
+    if (!selectedVehicleId) return;
+    setInvoiceSaving(true);
+    try {
+      const saved = await saveInvoice({
+        invoiceId,
+        vehicleId: selectedVehicleId,
+        status: status || "In Bay",
+        items,
+        laborTotal: totals.labor,
+        partsTotal: totals.parts,
+        tax: totals.tax,
+      });
+
+      const full = await getCustomerWithHistory(selectedCustomerId);
+      const freshVehicles = full.vehicles || [];
+      setCustomerVehicles(freshVehicles);
+      const freshVehicle = freshVehicles.find((v) => v.id === selectedVehicleId);
+      const freshHistory = flattenHistory(freshVehicle);
+      setHistory(freshHistory);
+
+      const idx = freshHistory.findIndex((h) => h.id === saved.id);
+      if (idx >= 0) loadInvoiceFromHistory(idx, freshHistory);
+    } catch (err) {
+      console.error("Failed to save invoice:", err);
+      setSaveStatus("error");
+    }
+    setInvoiceSaving(false);
+  }
+
+  // history is sorted newest-first, so "previous" (older) moves to a
+  // higher index, "next" (newer) moves to a lower one.
+  function goToPreviousInvoice() {
+    if (history && historyIndex !== null && historyIndex < history.length - 1) {
+      loadInvoiceFromHistory(historyIndex + 1);
+    }
+  }
+  function goToNextInvoice() {
+    if (history && historyIndex !== null && historyIndex > 0) {
+      loadInvoiceFromHistory(historyIndex - 1);
+    }
+  }
+
   const roHeading = selectedCustomerId
     ? `${customer.name} — ${status || "New Repair Order"}`
     : customer.name
@@ -378,12 +449,39 @@ export default function RepairOrderPage() {
             <div className="ro-meta">
               <div className="m">
                 <div className="l">Invoice</div>
-                <div className="v">{invoiceNum ? `#${invoiceNum}` : "— new —"}</div>
+                <div className="v invoice-nav">
+                  <button
+                    className="invoice-arrow"
+                    onClick={goToPreviousInvoice}
+                    disabled={!history || historyIndex === null || historyIndex >= history.length - 1}
+                    title="Previous invoice"
+                  >
+                    ‹
+                  </button>
+                  <span>{invoiceNum ? `#${invoiceNum}` : "— new —"}</span>
+                  <button
+                    className="invoice-arrow"
+                    onClick={goToNextInvoice}
+                    disabled={!history || historyIndex === null || historyIndex <= 0}
+                    title="Next invoice"
+                  >
+                    ›
+                  </button>
+                </div>
               </div>
               <div className="m">
                 <div className="l">Date</div>
                 <div className="v">{invoiceDate}</div>
               </div>
+              {selectedVehicleId && (
+                <button
+                  className="ro-save-btn"
+                  onClick={handleSaveInvoiceClick}
+                  disabled={invoiceSaving || items.length === 0}
+                >
+                  {invoiceSaving ? "Saving..." : invoiceId ? "Save Invoice" : "Save New Invoice"}
+                </button>
+              )}
               {selectedCustomerId && (
                 <button
                   className={`ro-save-btn ${saveStatus === "error" ? "error" : ""}`}
@@ -417,7 +515,7 @@ export default function RepairOrderPage() {
               onFieldChange={handleVehicleFieldChange}
               history={history}
               onSelectInvoice={(idx) => {
-                if (history && history[idx]) loadInvoiceFromHistory(history[idx]);
+                if (history && history[idx]) loadInvoiceFromHistory(idx);
               }}
               vehicleCount={customerVehicles.length}
               onSwitchVehicle={handleSwitchVehicle}
