@@ -23,15 +23,30 @@ const ACTIONS = [
  * QuickActions
  * Row of shortcut buttons below the Customer/Vehicle form. Each button owns
  * its own popup file under ./popups — this component just tracks which one
- * (if any) is currently open, and forwards catalog picks up to the ticket.
+ * (if any) is currently open, and forwards real data down to whichever
+ * popup needs it.
  *
  * Props:
  *  - onAddPart(catalogItem), onAddLabor(catalogItem), onAddJob(catalogItem):
  *    called when a row is picked in the respective popup, so the parent
  *    can insert a line item.
  *  - onMarkDone(): called when "Mark as Done" is confirmed.
+ *  - items, totals: the current ticket's line items and computed totals —
+ *    feeds Profit and Estimate so they show real numbers.
+ *  - vehicleId, customerId, vehicleLabel: feeds Schedule so a booked
+ *    appointment is tied to the right vehicle/customer.
  */
-export default function QuickActions({ onAddPart, onAddLabor, onAddJob, onMarkDone }) {
+export default function QuickActions({
+  onAddPart,
+  onAddLabor,
+  onAddJob,
+  onMarkDone,
+  items,
+  totals,
+  vehicleId,
+  customerId,
+  vehicleLabel,
+}) {
   const [activePopup, setActivePopup] = useState(null);
   const close = () => setActivePopup(null);
 
@@ -48,11 +63,17 @@ export default function QuickActions({ onAddPart, onAddLabor, onAddJob, onMarkDo
       <PartsPopup isOpen={activePopup === "parts"} onClose={close} onPick={onAddPart} />
       <LaborPopup isOpen={activePopup === "labor"} onClose={close} onPick={onAddLabor} />
       <QuickJobsPopup isOpen={activePopup === "quickJobs"} onClose={close} onPick={onAddJob} />
-      <ProfitPopup isOpen={activePopup === "profit"} onClose={close} />
+      <ProfitPopup isOpen={activePopup === "profit"} onClose={close} totals={totals} />
       <DonePopup isOpen={activePopup === "done"} onClose={close} onConfirm={onMarkDone} />
       <NotePopup isOpen={activePopup === "note"} onClose={close} />
-      <EstimatePopup isOpen={activePopup === "estimate"} onClose={close} />
-      <SchedulePopup isOpen={activePopup === "schedule"} onClose={close} />
+      <EstimatePopup isOpen={activePopup === "estimate"} onClose={close} items={items} totals={totals} />
+      <SchedulePopup
+        isOpen={activePopup === "schedule"}
+        onClose={close}
+        vehicleId={vehicleId}
+        customerId={customerId}
+        vehicleLabel={vehicleLabel}
+      />
     </>
   );
 }
