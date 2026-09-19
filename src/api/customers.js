@@ -9,7 +9,7 @@ export async function searchCustomers(query) {
   if (!query.trim()) return [];
   const { data, error } = await supabase
     .from("customers")
-    .select("id, name, phone1, phone2, addr, cityzip, vehicles(id, label, specs, plate, vin, odo)")
+    .select("id, name, phone1, phone2, addr, cityzip, vehicles(id, year, make, model, engine_specs, plate, vin, odo)")
     .ilike("name", `%${query}%`)
     .limit(10);
   if (error) throw error;
@@ -28,7 +28,7 @@ export async function getCustomerWithHistory(customerId) {
       `
       id, name, addr, cityzip, phone1, phone2,
       vehicles (
-        id, label, specs, plate, vin, odo,
+        id, year, make, model, engine_specs, plate, vin, odo,
         invoices (
           id, num, date, status, labor_total, parts_total, tax,
           line_items ( id, kind, tag, code, description, sub, qty, price, total )
@@ -50,7 +50,7 @@ export async function getOpenBoard() {
     .select(
       `
       id, num, date, status, labor_total, parts_total, tax,
-      vehicles ( id, label, customer_id, customers ( id, name ) )
+      vehicles ( id, year, make, model, customer_id, customers ( id, name ) )
     `
     )
     .not("status", "in", '("Ready for Pickup","Paid")')

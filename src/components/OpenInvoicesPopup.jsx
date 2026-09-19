@@ -13,7 +13,7 @@ function money(n) {
  *
  * Props:
  *  - onSelect(row): fired when a row is picked; row includes
- *    { id, num, vehicles: { id, customer_id, label, customers: { name } } }
+ *    { id, num, vehicles: { id, customer_id, year, make, model, customers: { name } } }
  */
 export default function OpenInvoicesPopup({ isOpen, onClose, onSelect }) {
   const [rows, setRows] = useState([]);
@@ -53,7 +53,8 @@ export default function OpenInvoicesPopup({ isOpen, onClose, onSelect }) {
               <div className="li-top">
                 <span className="code">#{row.num}</span>
                 <span className="desc">
-                  {row.vehicles?.customers?.name} &mdash; {row.vehicles?.label}
+                  {row.vehicles?.customers?.name} &mdash;{" "}
+                  {[row.vehicles?.year, row.vehicles?.make, row.vehicles?.model].filter(Boolean).join(" ")}
                 </span>
               </div>
               <div className="li-bottom">
