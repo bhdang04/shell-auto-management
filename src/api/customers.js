@@ -31,7 +31,7 @@ export async function getCustomerWithHistory(customerId) {
         id, label, specs, plate, vin, odo,
         invoices (
           id, num, date, status, labor_total, parts_total, tax,
-          line_items ( id, tag, description, sub, qty, price, total )
+          line_items ( id, kind, tag, code, description, sub, qty, price, total )
         )
       )
     `

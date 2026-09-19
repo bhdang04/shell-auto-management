@@ -101,8 +101,8 @@ export function printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer,
     </div>
     <div class="box">
       <h4>Vehicle</h4>
-      <div class="name">${esc(vehicle.label)}</div>
-      <p>${esc(vehicle.specs)}${vehicle.odo ? " &middot; " + esc(vehicle.odo) + " mi" : ""}<br>Plate ${esc(vehicle.plate) || "—"} &middot; VIN ${esc(vehicle.vin) || "—"}</p>
+      <div class="name">${esc([vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" "))}</div>
+      <p>${esc(vehicle.engine_specs)}${vehicle.odo ? " &middot; " + esc(vehicle.odo) + " mi" : ""}<br>Plate ${esc(vehicle.plate) || "—"} &middot; VIN ${esc(vehicle.vin) || "—"}</p>
     </div>
   </div>
 

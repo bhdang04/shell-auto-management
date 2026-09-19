@@ -24,7 +24,7 @@ const EMPTY_CUSTOMER = { name: "", addr: "", cityzip: "", phone1: "", phone2: ""
 // Selecting a vehicle whose most recent invoice has one of these statuses
 // starts a fresh ticket instead of reopening the closed one.
 const CLOSED_STATUSES = ["Ready for Pickup", "Paid"];
-const EMPTY_VEHICLE = { label: "", specs: "", plate: "", vin: "", odo: "" };
+const EMPTY_VEHICLE = { year: "", make: "", model: "", engine_specs: "", plate: "", vin: "", odo: "" };
 const DEFAULT_TAX_RATE = 0.0625; // used only for brand-new, manually-built invoices
 
 function todayStr() {
@@ -151,8 +151,10 @@ export default function RepairOrderPage() {
    *  already-selected customer's other vehicles. */
   function switchToVehicle(v) {
     setVehicle({
-      label: v.label || "",
-      specs: v.specs || "",
+      year: v.year || "",
+      make: v.make || "",
+      model: v.model || "",
+      engine_specs: v.engine_specs || "",
       plate: v.plate || "",
       vin: v.vin || "",
       odo: v.odo || "",
@@ -254,8 +256,10 @@ export default function RepairOrderPage() {
       setCustomerVehicles(vehicles);
       const matchedVehicle = vehicles.find((v) => v.id === row.vehicles.id) || vehicles[0];
       setVehicle({
-        label: matchedVehicle.label || "",
-        specs: matchedVehicle.specs || "",
+        year: matchedVehicle.year || "",
+        make: matchedVehicle.make || "",
+        model: matchedVehicle.model || "",
+        engine_specs: matchedVehicle.engine_specs || "",
         plate: matchedVehicle.plate || "",
         vin: matchedVehicle.vin || "",
         odo: matchedVehicle.odo || "",
@@ -280,13 +284,18 @@ export default function RepairOrderPage() {
    *  the invoice for real, not just flip a status flag on something that
    *  might not even be saved yet. Reuses the same saveInvoice path as the
    *  Save Invoice button, just forcing the closed status. */
+  /** Marks the current ticket closed AND saves it — "Done" should finalize
+   *  the invoice for real, not just flip a status flag on something that
+   *  might not even be saved yet. Reuses the same saveInvoice path as the
+   *  Save Invoice button, forcing the closed status, then clears the form
+   *  so the next car starts on a blank ticket instead of staying on the
+   *  one that was just closed out. */
   async function handleMarkDone() {
-    const closedStatus = "Ready for Pickup";
-    setStatus(closedStatus);
     if (!selectedVehicleId) return;
+    const closedStatus = "Ready for Pickup";
     setInvoiceSaving(true);
     try {
-      const saved = await saveInvoice({
+      await saveInvoice({
         invoiceId,
         vehicleId: selectedVehicleId,
         status: closedStatus,
@@ -295,21 +304,13 @@ export default function RepairOrderPage() {
         partsTotal: totals.parts,
         tax: totals.tax,
       });
-
-      const full = await getCustomerWithHistory(selectedCustomerId);
-      const freshVehicles = full.vehicles || [];
-      setCustomerVehicles(freshVehicles);
-      const freshVehicle = freshVehicles.find((v) => v.id === selectedVehicleId);
-      const freshHistory = flattenHistory(freshVehicle);
-      setHistory(freshHistory);
-
-      const idx = freshHistory.findIndex((h) => h.id === saved.id);
-      if (idx >= 0) loadInvoiceFromHistory(idx, freshHistory);
+      clearRO();
     } catch (err) {
       console.error("Failed to finalize invoice:", err);
       setSaveStatus("error");
+    } finally {
+      setInvoiceSaving(false);
     }
-    setInvoiceSaving(false);
   }
 
   /** Creates a new blank vehicle for the current customer and switches to it. */
@@ -676,7 +677,7 @@ export default function RepairOrderPage() {
             totals={totals}
             vehicleId={selectedVehicleId}
             customerId={selectedCustomerId}
-            vehicleLabel={vehicle.label}
+            vehicleLabel={[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")}
           />
 
           <div className="bay-invoice">
