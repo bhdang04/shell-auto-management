@@ -72,6 +72,9 @@ export default function TopBar({ onNewRO, onJumpSearch, onShowOpenInvoices, onLo
       <button className="bay-open-invoices" onClick={onShowOpenInvoices}>
         Open Invoices
       </button>
+      <button className="bay-reports" onClick={() => alert("Reports not implemented yet")}>
+        Reports
+      </button>
       {onLogout && (
         <button className="bay-logout" onClick={onLogout}>
           Log Out
