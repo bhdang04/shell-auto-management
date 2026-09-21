@@ -4,6 +4,7 @@ import CustomerForm from "../components/customer-info/CustomerForm";
 import VehicleForm from "../components/vehicle-info/VehicleForm";
 import VehiclePickerPopup from "../components/vehicle-info/VehiclePickerPopup";
 import OpenInvoicesPopup from "../components/OpenInvoicesPopup";
+import CustomersPopup from "../components/CustomersPopup";
 import QuickActions from "../components/button-row/QuickActions";
 import LineItems from "../components/LineItems";
 import InvoiceTotals from "../components/InvoiceTotals";
@@ -102,7 +103,8 @@ export default function RepairOrderPage() {
   const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false);
   const [pendingCustomer, setPendingCustomer] = useState(null);
   const [customerVehicles, setCustomerVehicles] = useState([]);
-  const [openInvoicesOpen, setOpenInvoicesOpen] = useState(false); // every vehicle for the current customer
+  const [openInvoicesOpen, setOpenInvoicesOpen] = useState(false);
+  const [customersOpen, setCustomersOpen] = useState(false); // every vehicle for the current customer
 
   // Full parts/labor catalogs, loaded once here purely for the ticket's
   // Code-field auto-fill lookup — separate from the copies PartsPopup/
@@ -566,6 +568,12 @@ export default function RepairOrderPage() {
         onSelect={loadInvoiceById}
       />
 
+      <CustomersPopup
+        isOpen={customersOpen}
+        onClose={() => setCustomersOpen(false)}
+        onSelect={selectCustomer}
+      />
+
       <div className="bay-body">
         <div className="bay-main">
           <div className="ro-topline">
@@ -654,6 +662,7 @@ export default function RepairOrderPage() {
               onFieldChange={handleCustomerFieldChange}
               onSelectCustomer={selectCustomer}
               onCreateNew={createNewCustomer}
+              onShowCustomers={() => setCustomersOpen(true)}
             />
             <VehicleForm
               vehicle={vehicle}

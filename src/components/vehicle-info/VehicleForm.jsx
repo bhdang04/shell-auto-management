@@ -1,9 +1,13 @@
+import { useState } from "react";
 import VehicleHistory from "./VehicleHistory";
+import MakeField from "./MakeField";
+import ModelField from "./ModelField";
+import { decodeVin, vinResultToSpecs } from "../../api/vehicleLookup";
 
 /**
  * VehicleForm
  * Props:
- *  - vehicle: { label, specs, plate, vin, odo }
+ *  - vehicle: { year, make, model, engine_specs, plate, vin, odo }
  *  - onFieldChange(field, value): update a single vehicle field
  *  - history: passed straight through to VehicleHistory
  *  - onSelectInvoice(index): passed straight through to VehicleHistory
@@ -20,6 +24,30 @@ export default function VehicleForm({
   onSwitchVehicle,
   onAddVehicle,
 }) {
+  const [vinStatus, setVinStatus] = useState(null); // null | "looking" | "done" | "error"
+
+  async function handleVinBlur() {
+    const vin = vehicle.vin.trim();
+    if (vin.length !== 17) return; // not a full VIN yet, nothing to look up
+    setVinStatus("looking");
+    try {
+      const result = await decodeVin(vin);
+      if (!result.make) {
+        setVinStatus("error"); // valid-length VIN, but NHTSA didn't recognize it
+        return;
+      }
+      // Don't clobber fields the tech already filled in by hand.
+      if (!String(vehicle.year || "").trim()) onFieldChange("year", result.year);
+      if (!vehicle.make?.trim()) onFieldChange("make", result.make);
+      if (!vehicle.model?.trim()) onFieldChange("model", result.model);
+      if (!vehicle.engine_specs?.trim()) onFieldChange("engine_specs", vinResultToSpecs(result));
+      setVinStatus("done");
+    } catch (err) {
+      console.error("VIN decode failed:", err);
+      setVinStatus("error");
+    }
+  }
+
   return (
     <div className="ro-card">
       <div className="ro-card-head">
@@ -38,21 +66,30 @@ export default function VehicleForm({
         )}
       </div>
 
-      <div className="field-row single">
+      <div className="field-row veh-ymm">
         <div className="field">
-          <label>Year / Make / Model</label>
+          <label>Year</label>
           <input
-            value={vehicle.label}
-            onChange={(e) => onFieldChange("label", e.target.value)}
-            placeholder="e.g. 2019 Toyota Tacoma SR5"
+            value={vehicle.year || ""}
+            onChange={(e) => onFieldChange("year", e.target.value)}
+            placeholder="2019"
+            maxLength={4}
+            inputMode="numeric"
           />
         </div>
+        <MakeField value={vehicle.make || ""} onChange={(v) => onFieldChange("make", v)} />
+        <ModelField
+          value={vehicle.model || ""}
+          onChange={(v) => onFieldChange("model", v)}
+          make={vehicle.make}
+          year={vehicle.year}
+        />
       </div>
 
       <div className="field-row">
         <div className="field">
           <label>Engine / Drivetrain</label>
-          <input value={vehicle.specs} onChange={(e) => onFieldChange("specs", e.target.value)} />
+          <input value={vehicle.engine_specs || ""} onChange={(e) => onFieldChange("engine_specs", e.target.value)} />
         </div>
         <div className="field">
           <label>Odometer</label>
@@ -66,8 +103,22 @@ export default function VehicleForm({
           <input value={vehicle.plate} onChange={(e) => onFieldChange("plate", e.target.value)} />
         </div>
         <div className="field">
-          <label>VIN</label>
-          <input value={vehicle.vin} onChange={(e) => onFieldChange("vin", e.target.value)} />
+          <label>
+            VIN{" "}
+            {vinStatus === "looking" && <span className="vin-status">looking up...</span>}
+            {vinStatus === "done" && <span className="vin-status ok">✓ filled from VIN</span>}
+            {vinStatus === "error" && <span className="vin-status err">not found</span>}
+          </label>
+          <input
+            value={vehicle.vin}
+            onChange={(e) => {
+              onFieldChange("vin", e.target.value);
+              if (vinStatus) setVinStatus(null);
+            }}
+            onBlur={handleVinBlur}
+            placeholder="17-character VIN"
+            maxLength={17}
+          />
         </div>
       </div>
 

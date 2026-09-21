@@ -7,11 +7,25 @@ import CustomerSearch from "./CustomerSearch";
  *  - onFieldChange(field, value): update a single customer field
  *  - onSelectCustomer(customer): a search result was picked
  *  - onCreateNew(name): "create new customer" was picked
+ *  - onShowCustomers(): opens the full customer catalog browser
  */
-export default function CustomerForm({ customer, onFieldChange, onSelectCustomer, onCreateNew }) {
+export default function CustomerForm({
+  customer,
+  onFieldChange,
+  onSelectCustomer,
+  onCreateNew,
+  onShowCustomers,
+}) {
   return (
     <div className="ro-card">
-      <h4>Customer</h4>
+      <div className="ro-card-head">
+        <h4>Customer</h4>
+        <div className="ro-card-actions">
+          <button className="ro-card-link" onClick={onShowCustomers}>
+            Customers
+          </button>
+        </div>
+      </div>
 
       <CustomerSearch
         nameValue={customer.name}

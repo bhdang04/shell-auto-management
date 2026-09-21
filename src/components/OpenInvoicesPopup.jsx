@@ -6,6 +6,14 @@ function money(n) {
   return "$" + Number(n || 0).toFixed(2);
 }
 
+/** Earliest upcoming appointment date for a row's vehicle, or null if none. */
+function nextAppointmentDate(row) {
+  const appts = row.vehicles?.appointments || [];
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = appts.map((a) => a.date).filter((d) => d >= today).sort();
+  return upcoming[0] || null;
+}
+
 /**
  * OpenInvoicesPopup
  * Every invoice in the shop that isn't closed out yet (not "Ready for
@@ -48,6 +56,7 @@ export default function OpenInvoicesPopup({ isOpen, onClose, onSelect }) {
         {!loading && !error && rows.length === 0 && <div className="lookup-empty">Nothing open right now.</div>}
         {rows.map((row) => {
           const total = Number(row.labor_total) + Number(row.parts_total) + Number(row.tax);
+          const scheduledDate = nextAppointmentDate(row);
           return (
             <div className="lookup-item" key={row.id} onClick={() => handlePick(row)}>
               <div className="li-top">
@@ -57,6 +66,9 @@ export default function OpenInvoicesPopup({ isOpen, onClose, onSelect }) {
                   {[row.vehicles?.year, row.vehicles?.make, row.vehicles?.model].filter(Boolean).join(" ")}
                 </span>
               </div>
+              {scheduledDate && (
+                <div className="li-scheduled">Scheduled date: {scheduledDate}</div>
+              )}
               <div className="li-bottom">
                 <span className="price">{row.status}</span>
                 <span className="price">{money(total)}</span>

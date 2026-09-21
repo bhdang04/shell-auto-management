@@ -21,6 +21,16 @@ export async function searchCustomers(query) {
  * invoice + line item on file. This is what populates CustomerForm,
  * VehicleForm, VehicleHistory, and LineItems all at once.
  */
+/** Every customer on file, for the "Customers" catalog browser. */
+export async function getAllCustomers() {
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, name, phone1, cityzip, vehicles(id)")
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
 export async function getCustomerWithHistory(customerId) {
   const { data, error } = await supabase
     .from("customers")
@@ -50,7 +60,7 @@ export async function getOpenBoard() {
     .select(
       `
       id, num, date, status, labor_total, parts_total, tax,
-      vehicles ( id, year, make, model, customer_id, customers ( id, name ) )
+      vehicles ( id, year, make, model, customer_id, customers ( id, name ), appointments ( date ) )
     `
     )
     .not("status", "in", '("Ready for Pickup","Paid")')
