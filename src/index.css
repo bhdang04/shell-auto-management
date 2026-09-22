@@ -86,11 +86,13 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 .bay-body { min-height: calc(100vh - 76px); }
 .bay-main { padding:24px 40px; max-width:1800px; margin:0 auto; }
 
-.quick-actions { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px; }
+.quick-actions { display:flex; gap:10px; margin-bottom:18px; }
 .quick-action-btn {
+  flex:1;
   background:var(--panel); border:1px solid var(--line); color:var(--text);
   font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; font-size:12.5px;
-  padding:10px 18px; border-radius:6px; cursor:pointer; transition: all .15s ease;
+  padding:13px 10px; border-radius:6px; cursor:pointer; transition: all .15s ease;
+  text-align:center; white-space:nowrap;
 }
 .quick-action-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--panel2); }
 
@@ -132,9 +134,11 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 .search-create { padding:12px 14px; cursor:pointer; color:var(--accent); font-weight:600; font-size:13px; border-top:1px dashed var(--line); }
 .search-create:hover { background:var(--panel); }
 
-.ro-topline { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.ro-topline { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:24px; flex-wrap:wrap; }
 .ro-topline h2 { font-family:'Oswald'; font-size:17px; text-transform:uppercase; letter-spacing:.03em; }
-.ro-meta { display:flex; gap:22px; align-items:baseline; }
+.ro-meta { display:flex; gap:26px; align-items:center; }
+.ro-meta-divider { width:1px; align-self:stretch; background:var(--line); }
+.ro-actions { display:flex; align-items:center; gap:12px; }
 .ro-meta .m { text-align:right; }
 .ro-meta .m .l { font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:.1em; }
 .ro-meta .m .v { font-family:'JetBrains Mono'; font-size:14px; color:var(--accent); }
@@ -158,8 +162,8 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 .ro-clear { font-size:12px; color:var(--muted); text-decoration:underline; cursor:pointer; background:none; border:none; font-family:'Inter'; }
 .ro-save-btn {
   background:var(--accent); color:#1a1206; border:none; border-radius:6px;
-  padding:9px 18px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em;
-  font-size:12px; font-weight:700; cursor:pointer; transition: opacity .15s ease;
+  padding:11px 20px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em;
+  font-size:12px; font-weight:700; cursor:pointer; transition: opacity .15s ease; white-space:nowrap;
 }
 .ro-save-btn:disabled { opacity:.6; cursor:default; }
 .ro-save-btn.error { background:var(--bad); color:#fff; }
@@ -402,13 +406,14 @@ dialog.popup-modal--drawer {
   border: 1px solid var(--line);
   color: var(--bad);
   border-radius: 6px;
-  padding: 9px 16px;
+  padding: 11px 18px;
   font-family: 'Oswald', sans-serif;
   text-transform: uppercase;
   letter-spacing: .03em;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
 .ro-void-btn:hover { border-color: var(--bad); background: rgba(226,84,58,.1); }
 

@@ -23,7 +23,7 @@ import { printInvoiceReceipt } from "../lib/printInvoice";
 import PaymentPopup from "../components/PaymentPopup";
 import { openReceiptWindow, printPaymentReceipt } from "../lib/printReceipt";
 import ReportsPopup from "../components/ReportsPopup";
-import PaymentPopup from "../components/PaymentPopup";
+import VoidInvoicePopup from "../components/VoidInvoicePopup";
 
 const EMPTY_CUSTOMER = { name: "", addr: "", cityzip: "", phone1: "", phone2: "" };
 // Selecting a vehicle whose most recent invoice has one of these statuses
@@ -687,7 +687,7 @@ export default function RepairOrderPage() {
 
       <div className="bay-body">
         <div className="bay-main">
-          <div className="ro-topline">
+                    <div className="ro-topline">
             <h2>{roHeading}</h2>
             <div className="ro-meta">
               <div className="m">
@@ -737,38 +737,43 @@ export default function RepairOrderPage() {
                 <div className="l">Date</div>
                 <div className="v">{invoiceDate}</div>
               </div>
-              {selectedVehicleId && status !== "Paid" && status !== "Voided" && (
-                <button
-                  className="ro-save-btn"
-                  onClick={handleSaveInvoiceClick}
-                  disabled={invoiceSaving || items.length === 0}
-                >
-                  {invoiceSaving ? "Saving..." : invoiceId ? "Save Invoice" : "Save New Invoice"}
+
+              <div className="ro-meta-divider" />
+
+              <div className="ro-actions">
+                {selectedVehicleId && status !== "Paid" && status !== "Voided" && (
+                  <button
+                    className="ro-save-btn"
+                    onClick={handleSaveInvoiceClick}
+                    disabled={invoiceSaving || items.length === 0}
+                  >
+                    {invoiceSaving ? "Saving..." : invoiceId ? "Save Invoice" : "Save New Invoice"}
+                  </button>
+                )}
+                {invoiceId && status !== "Voided" && (
+                  <button className="ro-void-btn" onClick={() => setVoidPopupOpen(true)}>
+                    Void Invoice
+                  </button>
+                )}
+                {selectedCustomerId && (
+                  <button
+                    className={`ro-save-btn ${saveStatus === "error" ? "error" : ""}`}
+                    onClick={handleSaveClick}
+                    disabled={saveStatus === "saving"}
+                  >
+                    {saveStatus === "saving"
+                      ? "Saving..."
+                      : saveStatus === "error"
+                      ? "Save failed — retry"
+                      : dirty
+                      ? "Save"
+                      : "Saved"}
+                  </button>
+                )}
+                <button className="ro-clear" onClick={clearRO}>
+                  clear form
                 </button>
-              )}
-              {invoiceId && status !== "Voided" && (
-                <button className="ro-void-btn" onClick={() => setVoidPopupOpen(true)}>
-                  Void Invoice
-                </button>
-              )}
-              {selectedCustomerId && (
-                <button
-                  className={`ro-save-btn ${saveStatus === "error" ? "error" : ""}`}
-                  onClick={handleSaveClick}
-                  disabled={saveStatus === "saving"}
-                >
-                  {saveStatus === "saving"
-                    ? "Saving..."
-                    : saveStatus === "error"
-                    ? "Save failed — retry"
-                    : dirty
-                    ? "Save"
-                    : "Saved"}
-                </button>
-              )}
-              <button className="ro-clear" onClick={clearRO}>
-                clear form
-              </button>
+              </div>
             </div>
           </div>
 
