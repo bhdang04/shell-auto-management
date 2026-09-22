@@ -53,14 +53,31 @@ export async function updateInvoiceStatus(invoiceId, status) {
  * no diffing needed since a ticket's line count is always small).
  *
  * items: array of { kind, tag, code, desc, sub, qty, price, total }
+ * paymentMethod / paymentSurcharge: optional — only set when this save is
+ * coming from Take Payment. Omitted (undefined) on ordinary saves, which
+ * leaves the existing stored value untouched rather than wiping it out.
  * Returns the saved invoice row (with its real `num`).
  */
-export async function saveInvoice({ invoiceId, vehicleId, status, items, laborTotal, partsTotal, tax }) {
+export async function saveInvoice({
+  invoiceId,
+  vehicleId,
+  status,
+  items,
+  laborTotal,
+  partsTotal,
+  tax,
+  paymentMethod,
+  paymentSurcharge,
+}) {
+  const invoiceFields = { status, labor_total: laborTotal, parts_total: partsTotal, tax };
+  if (paymentMethod !== undefined) invoiceFields.payment_method = paymentMethod;
+  if (paymentSurcharge !== undefined) invoiceFields.payment_surcharge = paymentSurcharge;
+
   let invoice;
   if (invoiceId) {
     const { data, error } = await supabase
       .from("invoices")
-      .update({ status, labor_total: laborTotal, parts_total: partsTotal, tax })
+      .update(invoiceFields)
       .eq("id", invoiceId)
       .select()
       .single();
@@ -69,7 +86,7 @@ export async function saveInvoice({ invoiceId, vehicleId, status, items, laborTo
   } else {
     const { data, error } = await supabase
       .from("invoices")
-      .insert({ vehicle_id: vehicleId, status, labor_total: laborTotal, parts_total: partsTotal, tax })
+      .insert({ vehicle_id: vehicleId, ...invoiceFields })
       .select()
       .single();
     if (error) throw error;

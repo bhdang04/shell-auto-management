@@ -1,20 +1,20 @@
 // TODO: move shop info to a settings table/screen once one exists —
 // hardcoded here for now since there's only one shop.
-const SHOP = {
+export const SHOP = {
   name: "Shell Complete Auto Service",
   addr: "482 Auto Plaza Dr, San Jose, CA 95112",
   phone: "(408) 555-0142",
 };
 
-function money(n) {
+export function money(n) {
   return "$" + Number(n || 0).toFixed(2);
 }
 
-function esc(s) {
+export function esc(s) {
   return String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 }
 
-function itemRow(it) {
+export function itemRow(it) {
   const qty = it.qty === "" || it.qty === undefined ? "—" : it.qty;
   const price = it.price === "" || it.price === undefined ? "—" : money(it.price);
   const total = it.qty === "" || it.price === "" ? "—" : money(it.total);
@@ -36,7 +36,7 @@ function itemRow(it) {
  * items: the same shape used throughout the app —
  *   { kind: 'item'|'comment', tag, code, desc, sub, qty, price, total }
  */
-export function printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer, vehicle, items, totals }) {
+export function printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer, vehicle, items, totals, paymentMethod, paymentSurcharge }) {
   const itemLines = items.filter((it) => it.kind !== "comment");
   const commentLines = items.filter((it) => it.kind === "comment");
 
@@ -118,12 +118,22 @@ export function printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer,
       : ""
   }
 
-  <div class="totals">
+    <div class="totals">
     <table>
       <tr><td>Labor</td><td class="r">${money(totals.labor)}</td></tr>
       <tr><td>Parts</td><td class="r">${money(totals.parts)}</td></tr>
       <tr><td>Sales Tax</td><td class="r">${money(totals.tax)}</td></tr>
-      <tr class="due"><td>Total Due</td><td class="r">${money(totals.due)}</td></tr>
+      ${
+        paymentMethod && paymentSurcharge > 0
+          ? `<tr><td>Card Surcharge</td><td class="r">${money(paymentSurcharge)}</td></tr>`
+          : ""
+      }
+      <tr class="due"><td>Total Due</td><td class="r">${money(totals.due + (paymentSurcharge || 0))}</td></tr>
+      ${
+        paymentMethod
+          ? `<tr><td style="padding-top:8px;color:#166534;font-weight:700;">Paid via ${esc(paymentMethod)}</td><td></td></tr>`
+          : ""
+      }
     </table>
   </div>
 

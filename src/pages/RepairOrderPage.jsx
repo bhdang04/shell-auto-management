@@ -18,8 +18,10 @@ import {
   updateCustomer,
   upsertVehicle,
 } from "../api/customers";
-import { saveInvoice } from "../api/invoices";
+import { saveInvoice, updateInvoiceStatus } from "../api/invoices";
 import { printInvoiceReceipt } from "../lib/printInvoice";
+import PaymentPopup from "../components/PaymentPopup";
+import { openReceiptWindow, printPaymentReceipt } from "../lib/printReceipt";
 
 const EMPTY_CUSTOMER = { name: "", addr: "", cityzip: "", phone1: "", phone2: "" };
 // Selecting a vehicle whose most recent invoice has one of these statuses
@@ -37,16 +39,18 @@ function todayStr() {
  *  line_items) into the flat { history: [...] } shape the UI expects.
  *  Sorted newest-first so the arrow navigation has a stable order. */
 function flattenHistory(vehicle) {
-  const list = (vehicle?.invoices || []).map((inv) => ({
+    const list = (vehicle?.invoices || []).map((inv) => ({
     id: inv.id,
     num: inv.num,
     date: inv.date,
     status: inv.status,
     desc: inv.line_items?.[0]?.description || "Repair order",
-    total: Number(inv.labor_total) + Number(inv.parts_total) + Number(inv.tax),
+    total: Number(inv.labor_total) + Number(inv.parts_total) + Number(inv.tax) + Number(inv.payment_surcharge || 0),
     labor: Number(inv.labor_total),
     parts: Number(inv.parts_total),
     tax: Number(inv.tax),
+    paymentMethod: inv.payment_method || null,
+    paymentSurcharge: Number(inv.payment_surcharge || 0),
     items: (inv.line_items || [])
       .slice()
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
@@ -89,6 +93,9 @@ export default function RepairOrderPage() {
   const [invoiceSaving, setInvoiceSaving] = useState(false);
   const [invoiceInput, setInvoiceInput] = useState(""); // what's typed in the invoice # field
   const [invoiceLookupStatus, setInvoiceLookupStatus] = useState(null); // null | "searching" | "notfound"
+  const [showPay, setShowPay] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState(null);
+  const [paymentSurcharge, setPaymentSurcharge] = useState(0);
 
   // Keep the editable field in sync whenever the loaded invoice changes for
   // any other reason (arrows, search, picking a customer, clearing).
@@ -134,6 +141,8 @@ export default function RepairOrderPage() {
     setItems([]);
     setSaveStatus(null);
     setDirty(false);
+    setPaymentMethod(null);
+    setPaymentSurcharge(0);
   }
 
   function loadInvoiceFromHistory(idx, historyList) {
@@ -146,12 +155,13 @@ export default function RepairOrderPage() {
     setInvoiceDate(h.date);
     setStatus(h.status);
     setItems(h.items.map((it) => ({ ...it, _tax: h.tax })));
+    setPaymentMethod(h.paymentMethod || null);
+    setPaymentSurcharge(h.paymentSurcharge || 0);
   }
-
   /** Loads one vehicle's fields + invoice history. Doesn't touch customer
    *  info — used both by applyFullCustomer and by switching between an
    *  already-selected customer's other vehicles. */
-  function switchToVehicle(v) {
+  function switchToVehicle(v, invoiceIdOverride) {
     setVehicle({
       year: v.year || "",
       make: v.make || "",
@@ -167,6 +177,17 @@ export default function RepairOrderPage() {
     const invoiceHistory = flattenHistory(v);
     setHistory(invoiceHistory);
 
+    // A specific invoice was asked for (e.g. typed into the invoice # field)
+    // — load exactly that one regardless of its status, instead of falling
+    // back to "most recent open one, else blank."
+    if (invoiceIdOverride) {
+      const idx = invoiceHistory.findIndex((h) => h.id === invoiceIdOverride);
+      if (idx >= 0) {
+        loadInvoiceFromHistory(idx, invoiceHistory);
+        return;
+      }
+    }
+
     const latest = invoiceHistory[0];
     if (latest && !CLOSED_STATUSES.includes(latest.status)) {
       loadInvoiceFromHistory(0, invoiceHistory);
@@ -181,13 +202,15 @@ export default function RepairOrderPage() {
       setInvoiceDate(todayStr());
       setStatus(null);
       setItems([]);
+      setPaymentMethod(null);
+      setPaymentSurcharge(0);
     }
   }
 
   /** vehicleOverride: which vehicle to load. Falls back to the first one —
    *  callers with multiple vehicles should resolve which one first (either
    *  automatically, when there's only one, or via VehiclePickerPopup). */
-  function applyFullCustomer(full, vehicleOverride) {
+  function applyFullCustomer(full, vehicleOverride, invoiceIdOverride) {
     setCustomer({
       name: full.name,
       addr: full.addr || "",
@@ -198,7 +221,7 @@ export default function RepairOrderPage() {
     setSelectedCustomerId(full.id);
     const vehicles = full.vehicles || [];
     setCustomerVehicles(vehicles);
-    switchToVehicle(vehicleOverride || vehicles[0] || {});
+    switchToVehicle(vehicleOverride || vehicles[0] || {}, invoiceIdOverride);
   }
 
   /** Called when a dropdown search result is clicked — search only returns
@@ -381,7 +404,7 @@ export default function RepairOrderPage() {
       // The lookup already matched one specific vehicle (by plate/VIN/invoice#),
       // so use that one directly — no need for the multi-vehicle picker here.
       const matchedVehicle = result.customer.vehicles?.find((v) => v.id === result.vehicleId);
-      applyFullCustomer(result.customer, matchedVehicle);
+      applyFullCustomer(result.customer, matchedVehicle, result.invoiceId);
       return true;
     } catch (err) {
       console.error("Jump search failed:", err);
@@ -521,6 +544,53 @@ export default function RepairOrderPage() {
       setSaveStatus("error");
     }
     setInvoiceSaving(false);
+  }
+
+  function handlePay() {
+    setShowPay(true);   // <-- opens the popup
+  }
+
+    /** Take Payment confirm — saves the invoice as Paid with the chosen
+   *  method/surcharge recorded on it, prints the payment receipt, then
+   *  clears the ticket (same save-and-clear pattern as Done). */
+  async function handlePaymentConfirm({ method, surchargeAmount, finalTotal }) {
+    if (!selectedVehicleId) return;
+    const receiptWin = openReceiptWindow(); // must happen before any await, or the popup gets blocked
+    setInvoiceSaving(true);
+    try {
+      const saved = await saveInvoice({
+        invoiceId,
+        vehicleId: selectedVehicleId,
+        status: "Paid",
+        items,
+        laborTotal: totals.labor,
+        partsTotal: totals.parts,
+        tax: totals.tax,
+        paymentMethod: method,
+        paymentSurcharge: surchargeAmount,
+      });
+
+      printPaymentReceipt({
+        win: receiptWin,
+        method,
+        surchargeAmount,
+        finalTotal,
+        invoiceNum: saved.num,
+        invoiceDate,
+        customer,
+        vehicle,
+        items,
+        totals,
+      });
+
+      setShowPay(false);
+      clearRO();
+    } catch (err) {
+      console.error("Failed to record payment:", err);
+      setSaveStatus("error");
+    } finally {
+      setInvoiceSaving(false);
+    }
   }
 
   // history is sorted newest-first, so "previous" (older) moves to a
@@ -695,10 +765,16 @@ export default function RepairOrderPage() {
             <RepairOrderActions
               disabled={items.length === 0}
               onPrint={() =>
-                printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer, vehicle, items, totals })
+                printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer, vehicle, items, totals, paymentMethod, paymentSurcharge })
               }
               onText={() => alert("Text to customer — wire up an SMS provider here")}
-              onPay={() => alert("Take payment — wire up a payment provider here")}
+              onPay={handlePay}
+            />
+            <PaymentPopup
+              isOpen={showPay}
+              onClose={() => setShowPay(false)}
+              total={totals.due}
+              onConfirm={handlePaymentConfirm}
             />
           </div>
         </div>

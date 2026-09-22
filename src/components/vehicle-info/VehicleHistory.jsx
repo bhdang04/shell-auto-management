@@ -28,6 +28,7 @@ export default function VehicleHistory({ history, onSelectInvoice }) {
             </div>
             <div className="vh-right">
               <div className="vh-amt">{money(h.total)}</div>
+              {h.paymentMethod && <div className="vh-pay">{h.paymentMethod}</div>}
             </div>
           </div>
         ))

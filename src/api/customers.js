@@ -110,11 +110,15 @@ export async function findCustomerByLookup(query) {
 
   const { data: invoiceMatch } = await supabase
     .from("invoices")
-    .select("vehicle_id")
+    .select("id, vehicle_id")
     .eq("num", q)
     .maybeSingle();
 
   let vehicleId = invoiceMatch?.vehicle_id || null;
+  // Only set when the match came from an invoice number — a plate/VIN match
+  // has no single specific invoice in mind, so the caller should fall back
+  // to its normal "load most recent open, else blank" behavior for those.
+  const invoiceId = invoiceMatch?.id || null;
 
   if (!vehicleId) {
     // Partial match — a tech usually remembers part of a plate/VIN, not all
@@ -135,5 +139,5 @@ export async function findCustomerByLookup(query) {
   if (!vehicleRow) return null;
 
   const customer = await getCustomerWithHistory(vehicleRow.customer_id);
-  return { customer, vehicleId };
+  return { customer, vehicleId, invoiceId };
 }

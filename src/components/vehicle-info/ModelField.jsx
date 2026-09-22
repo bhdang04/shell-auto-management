@@ -30,7 +30,7 @@ export default function ModelField({ value, onChange, make, year }) {
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const models = await getModelsForMake(make.trim(), year?.trim());
+        const models = await getModelsForMake(make.trim(), typeof year === "string" ? year.trim() : "");
         const q = value.trim().toUpperCase();
         const matches = q ? models.filter((m) => m.toUpperCase().includes(q)) : models;
         setSuggestions(matches.slice(0, 8));
