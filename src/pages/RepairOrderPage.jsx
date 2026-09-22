@@ -306,6 +306,21 @@ export default function RepairOrderPage() {
     }
   }
 
+  /** Called when an "Expected Today" appointment is picked — there's no
+   *  invoice yet, so this just loads the customer/vehicle (same as a
+   *  normal customer search) and lets switchToVehicle's usual logic decide
+   *  whether to open an existing ticket or start fresh. */
+  async function loadFromAppointment(appt) {
+    try {
+      const full = await getCustomerWithHistory(appt.customer_id);
+      const vehicles = full.vehicles || [];
+      const matchedVehicle = vehicles.find((v) => v.id === appt.vehicle_id) || vehicles[0];
+      applyFullCustomer(full, matchedVehicle);
+    } catch (err) {
+      console.error("Failed to load from appointment:", err);
+    }
+  }
+
   /** Marks the current ticket closed. If it's already saved, persists the
    *  status right away; if not, the new status just rides along next time
    *  Save Invoice is clicked. Either way, selecting this vehicle again later
@@ -677,6 +692,7 @@ export default function RepairOrderPage() {
         isOpen={openInvoicesOpen}
         onClose={() => setOpenInvoicesOpen(false)}
         onSelect={loadInvoiceById}
+        onSelectAppointment={loadFromAppointment}
       />
 
       <CustomersPopup

@@ -420,6 +420,22 @@ dialog.popup-modal--drawer {
 .vh-item.voided { opacity: .55; }
 .vh-void-tag { color: var(--bad); font-weight: 600; }
 
+.board-section-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  margin: 18px 2px 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.board-section-title:first-child { margin-top: 0; }
+.board-section-count { color: var(--muted); font-weight: 400; }
+
+.lookup-item.expected { border-color: var(--accent-soft); }
+.lookup-item.expected:hover { border-color: var(--accent); }
+
 @media (max-width: 900px) {
   .ro-grid { grid-template-columns: 1fr; }
   .popup-modal--drawer { max-width: 100vw; }
