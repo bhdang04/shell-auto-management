@@ -321,6 +321,26 @@ export default function RepairOrderPage() {
     }
   }
 
+  /** Powers both the top search bar and typing an invoice # directly into
+   *  the invoice field — looks up by invoice #, plate, or VIN and loads
+   *  the matched customer/vehicle (and specific invoice, if the match was
+   *  an invoice number). Returns true/false so callers can show "no match"
+   *  feedback instead of silently doing nothing. */
+  async function handleJumpSearch(query) {
+    try {
+      const result = await findCustomerByLookup(query);
+      if (!result) return false;
+      // The lookup already matched one specific vehicle (by plate/VIN/invoice#),
+      // so use that one directly — no need for the multi-vehicle picker here.
+      const matchedVehicle = result.customer.vehicles?.find((v) => v.id === result.vehicleId);
+      applyFullCustomer(result.customer, matchedVehicle, result.invoiceId);
+      return true;
+    } catch (err) {
+      console.error("Jump search failed:", err);
+      return false;
+    }
+  }
+
   /** Marks the current ticket closed. If it's already saved, persists the
    *  status right away; if not, the new status just rides along next time
    *  Save Invoice is clicked. Either way, selecting this vehicle again later
@@ -401,34 +421,36 @@ export default function RepairOrderPage() {
   // --- Explicit save: writes the current customer/vehicle field values
   // back to Supabase. Only does anything once a customer actually exists
   // (created via "+ Create new customer" or loaded via search). ---
-  async function handleSaveClick() {
-    if (!selectedCustomerId) return;
+    async function handleSaveClick() {
+    if (!customer.name.trim()) return;
     setSaveStatus("saving");
     try {
-      await updateCustomer(selectedCustomerId, { ...customer });
-      if (selectedVehicleId) {
-        await upsertVehicle(selectedVehicleId, selectedCustomerId, { ...vehicle });
+      let customerId = selectedCustomerId;
+
+      if (!customerId) {
+        // No customer created yet — this is a from-scratch entry (typed
+        // straight into the form instead of using "+ Create new
+        // customer"), so create it now using whatever's currently filled in.
+        const newCustomer = await createCustomer({ ...customer });
+        customerId = newCustomer.id;
+        setSelectedCustomerId(customerId);
+
+        const newVehicle = await upsertVehicle(null, customerId, { ...vehicle });
+        setSelectedVehicleId(newVehicle.id);
+        setCustomerVehicles([newVehicle]);
+        setHistory([]);
+      } else {
+        await updateCustomer(customerId, { ...customer });
+        if (selectedVehicleId) {
+          await upsertVehicle(selectedVehicleId, customerId, { ...vehicle });
+        }
       }
+
       setSaveStatus("saved");
       setDirty(false);
     } catch (err) {
       console.error("Failed to save customer/vehicle:", err);
       setSaveStatus("error");
-    }
-  }
-
-  async function handleJumpSearch(query) {
-    try {
-      const result = await findCustomerByLookup(query);
-      if (!result) return false;
-      // The lookup already matched one specific vehicle (by plate/VIN/invoice#),
-      // so use that one directly — no need for the multi-vehicle picker here.
-      const matchedVehicle = result.customer.vehicles?.find((v) => v.id === result.vehicleId);
-      applyFullCustomer(result.customer, matchedVehicle, result.invoiceId);
-      return true;
-    } catch (err) {
-      console.error("Jump search failed:", err);
-      return false;
     }
   }
 
@@ -771,16 +793,18 @@ export default function RepairOrderPage() {
                     Void Invoice
                   </button>
                 )}
-                {selectedCustomerId && (
+                {(selectedCustomerId || customer.name.trim()) && (
                   <button
                     className={`ro-save-btn ${saveStatus === "error" ? "error" : ""}`}
                     onClick={handleSaveClick}
-                    disabled={saveStatus === "saving"}
+                    disabled={saveStatus === "saving" || !customer.name.trim()}
                   >
                     {saveStatus === "saving"
                       ? "Saving..."
                       : saveStatus === "error"
                       ? "Save failed — retry"
+                      : !selectedCustomerId
+                      ? "Create Customer"
                       : dirty
                       ? "Save"
                       : "Saved"}

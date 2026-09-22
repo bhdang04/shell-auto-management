@@ -15,7 +15,7 @@ function nextAppointmentDate(row) {
   return upcoming[0] || null;
 }
 
-const STATUS_ORDER = ["In Bay", "Waiting on Parts", "Estimate", "Scheduled"];
+const STATUS_ORDER = ["In Bay", "Waiting on Parts", "Estimate", "Scheduled", "Ready for Pickup"];
 
 function groupByStatus(rows) {
   const groups = {};
