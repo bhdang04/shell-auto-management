@@ -19,12 +19,15 @@ export default function VehicleHistory({ history, onSelectInvoice }) {
         <div className="vh-empty">No previous visits — new customer.</div>
       ) : (
         history.map((h, i) => (
-          <div className="vh-item" key={h.num} onClick={() => onSelectInvoice(i)}>
+          <div className={`vh-item ${h.status === "Voided" ? "voided" : ""}`} key={h.num} onClick={() => onSelectInvoice(i)}>
             <div className="vh-left">
               <div className="vh-num">
                 #{h.num} · {h.date}
               </div>
-              <div className="vh-desc">{h.desc}</div>
+              <div className="vh-desc">
+                {h.desc}
+                {h.status === "Voided" && <span className="vh-void-tag"> · VOIDED</span>}
+              </div>
             </div>
             <div className="vh-right">
               <div className="vh-amt">{money(h.total)}</div>

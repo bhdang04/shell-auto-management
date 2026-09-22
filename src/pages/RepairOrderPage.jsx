@@ -18,16 +18,17 @@ import {
   updateCustomer,
   upsertVehicle,
 } from "../api/customers";
-import { saveInvoice, updateInvoiceStatus } from "../api/invoices";
+import { saveInvoice, updateInvoiceStatus, voidInvoice } from "../api/invoices";
 import { printInvoiceReceipt } from "../lib/printInvoice";
 import PaymentPopup from "../components/PaymentPopup";
 import { openReceiptWindow, printPaymentReceipt } from "../lib/printReceipt";
 import ReportsPopup from "../components/ReportsPopup";
+import PaymentPopup from "../components/PaymentPopup";
 
 const EMPTY_CUSTOMER = { name: "", addr: "", cityzip: "", phone1: "", phone2: "" };
 // Selecting a vehicle whose most recent invoice has one of these statuses
 // starts a fresh ticket instead of reopening the closed one.
-const CLOSED_STATUSES = ["Ready for Pickup", "Paid"];
+const CLOSED_STATUSES = ["Ready for Pickup", "Paid", "Voided"];
 const EMPTY_VEHICLE = { year: "", make: "", model: "", engine_specs: "", plate: "", vin: "", odo: "" };
 const DEFAULT_TAX_RATE = 0.0625; // used only for brand-new, manually-built invoices
 
@@ -97,6 +98,8 @@ export default function RepairOrderPage() {
   const [showPay, setShowPay] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [paymentSurcharge, setPaymentSurcharge] = useState(0);
+  const [voidPopupOpen, setVoidPopupOpen] = useState(false);
+  const [voiding, setVoiding] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
 
   // Keep the editable field in sync whenever the loaded invoice changes for
@@ -552,6 +555,21 @@ export default function RepairOrderPage() {
     setShowPay(true);   // <-- opens the popup
   }
 
+  async function handleVoidConfirm(reason) {
+    if (!invoiceId) return;
+    setVoiding(true);
+    try {
+      await voidInvoice(invoiceId, reason);
+      setVoidPopupOpen(false);
+      clearRO();
+    } catch (err) {
+      console.error("Failed to void invoice:", err);
+      setSaveStatus("error");
+    } finally {
+      setVoiding(false);
+    }
+  }
+
   /** Regenerates the payment receipt for an already-paid, currently-loaded
    *  invoice — no popup, no re-save, just reprints from what's on file. */
   function handleReprintReceipt() {
@@ -719,13 +737,18 @@ export default function RepairOrderPage() {
                 <div className="l">Date</div>
                 <div className="v">{invoiceDate}</div>
               </div>
-              {selectedVehicleId && status !== "Paid" && (
+              {selectedVehicleId && status !== "Paid" && status !== "Voided" && (
                 <button
                   className="ro-save-btn"
                   onClick={handleSaveInvoiceClick}
                   disabled={invoiceSaving || items.length === 0}
                 >
                   {invoiceSaving ? "Saving..." : invoiceId ? "Save Invoice" : "Save New Invoice"}
+                </button>
+              )}
+              {invoiceId && status !== "Voided" && (
+                <button className="ro-void-btn" onClick={() => setVoidPopupOpen(true)}>
+                  Void Invoice
                 </button>
               )}
               {selectedCustomerId && (
@@ -788,6 +811,7 @@ export default function RepairOrderPage() {
             <RepairOrderActions
               disabled={items.length === 0}
               isPaid={status === "Paid"}
+              isVoided={status === "Voided"}
               onPrint={() =>
                 printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer, vehicle, items, totals, paymentMethod, paymentSurcharge })
               }
@@ -800,6 +824,13 @@ export default function RepairOrderPage() {
               onClose={() => setShowPay(false)}
               total={totals.due}
               onConfirm={handlePaymentConfirm}
+            />
+            <VoidInvoicePopup
+              isOpen={voidPopupOpen}
+              onClose={() => setVoidPopupOpen(false)}
+              invoiceNum={invoiceNum}
+              onConfirm={handleVoidConfirm}
+              voiding={voiding}
             />
           </div>
         </div>
