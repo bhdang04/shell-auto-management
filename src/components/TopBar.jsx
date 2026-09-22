@@ -8,10 +8,10 @@ import { useState } from "react";
  *    return true if a match was found, false otherwise, so this can show
  *    real feedback instead of silently doing nothing either way
  *  - onShowOpenInvoices(): opens the shop-wide open-invoices panel
+ *  - onShowReports(): opens the reports panel
  *  - onLogout(): optional — shows a Log Out link when provided
  */
-export default function TopBar({ onNewRO, onJumpSearch, onShowOpenInvoices, onLogout }) {
-  const [query, setQuery] = useState("");
+export default function TopBar({ onNewRO, onJumpSearch, onShowOpenInvoices, onShowReports, onLogout }) {  const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
@@ -72,7 +72,7 @@ export default function TopBar({ onNewRO, onJumpSearch, onShowOpenInvoices, onLo
       <button className="bay-open-invoices" onClick={onShowOpenInvoices}>
         Open Invoices
       </button>
-      <button className="bay-reports" onClick={() => alert("Reports not implemented yet")}>
+      <button className="bay-reports" onClick={onShowReports}>
         Reports
       </button>
       {onLogout && (
