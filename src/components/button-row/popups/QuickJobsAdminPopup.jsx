@@ -245,14 +245,14 @@ export default function QuickJobsAdminPopup({ isOpen, onClose }) {
 
   return (
     <Popup isOpen={isOpen} onClose={onClose} title="Manage Quick Jobs" variant="console">
-      <div style={{ display: "flex", gap: 20, minHeight: 420 }}>
-        <div style={{ width: 280, flexShrink: 0, borderRight: "1px solid var(--line)", paddingRight: 16 }}>
-          <div className="lookup-toolbar">
-            <button className="btn-small" onClick={handleNewJob} style={{ width: "100%" }}>
-              + New Quick Job
-            </button>
-          </div>
-          <div className="lookup-list">
+        <div className="qja-layout">
+            <div className="qja-sidebar">
+                <div className="lookup-toolbar">
+                    <button className="btn-small" onClick={handleNewJob} style={{ width: "100%" }}>
+                        + New Quick Job
+                    </button>
+                </div>
+            <div className="lookup-list">
             {jobsLoading && <div className="lookup-empty">Loading...</div>}
             {jobsError && <div className="lookup-empty">Couldn't load jobs.</div>}
             {!jobsLoading && !jobsError && jobs.length === 0 && (
@@ -260,10 +260,9 @@ export default function QuickJobsAdminPopup({ isOpen, onClose }) {
             )}
             {jobs.map((job) => (
               <div
-                className="lookup-item"
+                className={`lookup-item qja-job-item ${selectedJobId === job.id ? "on" : ""}`}
                 key={job.id}
                 onClick={() => handleSelectJob(job)}
-                style={{ borderColor: selectedJobId === job.id ? "var(--accent)" : undefined }}
               >
                 <div className="li-top">
                   <span className="desc">{job.name}</span>
@@ -281,7 +280,7 @@ export default function QuickJobsAdminPopup({ isOpen, onClose }) {
           </div>
         </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="qja-main">
           {!selectedJob && !creatingJob ? (
             <div className="lookup-empty">Select a quick job on the left, or create a new one.</div>
           ) : (
@@ -412,15 +411,15 @@ export default function QuickJobsAdminPopup({ isOpen, onClose }) {
                   )}
 
                   <div className="board-section-title">Add a Line</div>
-                  <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <div className="qja-add-tabs">
                     <button
-                      className={`console-tab ${addMode === "item" ? "on" : ""}`}
+                      className={`qja-add-tab ${addMode === "item" ? "on" : ""}`}
                       onClick={() => setAddMode(addMode === "item" ? null : "item")}
                     >
                       + Part / Labor
                     </button>
                     <button
-                      className={`console-tab ${addMode === "comment" ? "on" : ""}`}
+                      className={`qja-add-tab ${addMode === "comment" ? "on" : ""}`}
                       onClick={() => setAddMode(addMode === "comment" ? null : "comment")}
                     >
                       + Comment
@@ -428,12 +427,12 @@ export default function QuickJobsAdminPopup({ isOpen, onClose }) {
                   </div>
 
                   {addMode === "item" && (
-                    <div className="catalog-form">
-                      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                        <button className={`console-tab ${itemType === "part" ? "on" : ""}`} onClick={() => setItemType("part")}>
+                                        <div className="catalog-form">
+                      <div className="qja-type-tabs">
+                        <button className={`qja-type-tab ${itemType === "part" ? "on" : ""}`} onClick={() => setItemType("part")}>
                           Parts
                         </button>
-                        <button className={`console-tab ${itemType === "labor" ? "on" : ""}`} onClick={() => setItemType("labor")}>
+                        <button className={`qja-type-tab ${itemType === "labor" ? "on" : ""}`} onClick={() => setItemType("labor")}>
                           Labor
                         </button>
                       </div>
@@ -442,9 +441,9 @@ export default function QuickJobsAdminPopup({ isOpen, onClose }) {
                         value={catalogSearch}
                         onChange={(e) => setCatalogSearch(e.target.value)}
                         placeholder="Search catalog..."
-                        style={{ marginBottom: 10 }}
+                        style={{ marginBottom: 12 }}
                       />
-                      <div className="lookup-list">
+                      <div className="lookup-list qja-catalog-list">
                         {catalogLoading && <div className="lookup-empty">Loading...</div>}
                         {!catalogLoading && catalogItems.length === 0 && <div className="lookup-empty">No matches.</div>}
                         {catalogItems.map((it) => (

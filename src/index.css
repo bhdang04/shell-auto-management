@@ -267,8 +267,8 @@ dialog.popup-modal--drawer {
 .popup-modal--drawer .popup-content { max-height: calc(100vh - 57px); }
 
 /* Console — large workspace for multi-step flows (Estimate, Schedule) */
-.popup-modal--console { max-width: 980px; width: 92vw; }
-.popup-modal--console .popup-content { max-height: 76vh; }
+.popup-modal--console { max-width: 1180px; width: 94vw; }
+.popup-modal--console .popup-content { max-height: 80vh; }
 
 /* --- shared content inside popups --- */
 .popup-content .field { margin-bottom: 14px; }
@@ -282,6 +282,38 @@ dialog.popup-modal--drawer {
 .btn-row { display:flex; gap:10px; margin-top:18px; }
 .btn { flex:1; padding:11px; border-radius:6px; text-align:center; font-family:'Oswald'; text-transform:uppercase; font-size:12.5px; font-weight:600; letter-spacing:.03em; cursor:pointer; border:1px solid var(--line); background:transparent; color:var(--text); }
 .btn.primary { background:var(--accent); color:#1a1206; border-color:var(--accent); }
+
+/* --- Quick Jobs admin --- */
+.qja-layout { display:flex; gap:28px; min-height:520px; }
+.qja-sidebar { width:260px; flex-shrink:0; border-right:1px solid var(--line); padding-right:20px; }
+.qja-main { flex:1; min-width:0; }
+
+.qja-job-item { padding:13px 15px; }
+.qja-job-item .desc { font-size:14px; line-height:1.4; }
+.qja-job-item .li-bottom { margin-top:4px; }
+
+.qja-catalog-list .lookup-item { padding:13px 16px; }
+.qja-catalog-list .li-top { gap:12px; }
+.qja-catalog-list .desc { flex:1; line-height:1.4; }
+
+.qja-add-tabs { display:flex; gap:10px; margin-bottom:14px; }
+.qja-add-tab {
+  flex:1; text-align:center; padding:13px 10px; border-radius:6px;
+  border:1px solid var(--line); background:var(--bg); color:var(--muted);
+  font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; font-size:12.5px;
+  cursor:pointer; transition: all .15s ease;
+}
+.qja-add-tab.on { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+.qja-add-tab:hover:not(.on) { border-color:var(--muted); color:var(--text); }
+
+.qja-type-tabs { display:flex; gap:8px; margin-bottom:12px; }
+.qja-type-tab {
+  padding:9px 20px; border-radius:6px; border:1px solid var(--line); background:var(--bg);
+  color:var(--muted); font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em;
+  font-size:12px; cursor:pointer;
+}
+.qja-type-tab.on { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+.qja-job-item.on { border-color: var(--accent); background: var(--panel2); }
 
 .lookup-search { margin-bottom:14px; }
 .lookup-toolbar { display:flex; gap:8px; margin-bottom:14px; }
