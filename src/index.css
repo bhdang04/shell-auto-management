@@ -350,6 +350,53 @@ dialog.popup-modal--drawer {
 .cal-day.blank { background:none; border:none; cursor:default; }
 .cal-day.on { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
 
+/* --- Payment method popup --- */
+.pay-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.pay-btn {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 14px 10px;
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s ease;
+}
+.pay-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pay-btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.pay-summary {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+.pay-summary .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 5px 0;
+}
+.pay-summary .row.total {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--accent);
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+  padding-top: 10px;
+}
+
 @media (max-width: 900px) {
   .ro-grid { grid-template-columns: 1fr; }
   .popup-modal--drawer { max-width: 100vw; }
