@@ -1,18 +1,8 @@
 import { useState } from "react";
 import Modal from "../Modal";
 import QuickJobPicker from "./QuickJobsList";
-
-const CATEGORIES = [
-  "Kit Jobs",
-  "Transmission",
-  "Oil Changes",
-  "Tune Ups",
-  "A/C",
-  "Brakes",
-  "Cooling",
-  "Analysis & Inspections",
-  "Additional Service",
-];
+import QuickJobsAdminPopup from "./QuickJobsAdminPopup";
+import { CATEGORIES } from "../../../api/quickJobs";
 
 /**
  * QuickJobsPopup
@@ -24,6 +14,7 @@ const CATEGORIES = [
  */
 export default function QuickJobsPopup({ isOpen, onClose, onPick }) {
   const [category, setCategory] = useState(null);
+  const [adminOpen, setAdminOpen] = useState(false);
 
   function handlePick(lines) {
     if (onPick) onPick(lines);
@@ -36,39 +27,34 @@ export default function QuickJobsPopup({ isOpen, onClose, onPick }) {
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title={category || "Quick Jobs"}
-      variant="console"
-    >
-      {!category ? (
-        <div className="job-category-grid">
-          {CATEGORIES.map((c) => (
-            <div
-              key={c}
-              className="job-category-card"
-              onClick={() => setCategory(c)}
-            >
-              {c}
+    <>
+      <Modal isOpen={isOpen} onClose={handleClose} title={category || "Quick Jobs"} variant="console">
+        {!category ? (
+          <>
+            <div className="lookup-toolbar">
+              <button className="btn-small" onClick={() => setAdminOpen(true)}>
+                Manage Quick Jobs
+              </button>
             </div>
-          ))}
-        </div>
-      ) : (
-        <>
-          <button
-            className="job-back-btn"
-            onClick={() => setCategory(null)}
-          >
-            ← All Categories
-          </button>
+            <div className="job-category-grid">
+              {CATEGORIES.map((c) => (
+                <div key={c} className="job-category-card" onClick={() => setCategory(c)}>
+                  {c}
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <button className="job-back-btn" onClick={() => setCategory(null)}>
+              ← All Categories
+            </button>
+            <QuickJobPicker category={category} onPick={handlePick} />
+          </>
+        )}
+      </Modal>
 
-          <QuickJobPicker
-            category={category}
-            onPick={handlePick}
-          />
-        </>
-      )}
-    </Modal>
+      <QuickJobsAdminPopup isOpen={adminOpen} onClose={() => setAdminOpen(false)} />
+    </>
   );
 }
