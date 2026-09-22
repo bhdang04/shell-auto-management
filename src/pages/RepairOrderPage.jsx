@@ -550,6 +550,24 @@ export default function RepairOrderPage() {
     setShowPay(true);   // <-- opens the popup
   }
 
+  /** Regenerates the payment receipt for an already-paid, currently-loaded
+   *  invoice — no popup, no re-save, just reprints from what's on file. */
+  function handleReprintReceipt() {
+    const win = openReceiptWindow(); // must happen before any await — none here, but keep it first for consistency
+    printPaymentReceipt({
+      win,
+      method: paymentMethod,
+      surchargeAmount: paymentSurcharge,
+      finalTotal: totals.due + paymentSurcharge,
+      invoiceNum,
+      invoiceDate,
+      customer,
+      vehicle,
+      items,
+      totals,
+    });
+  }
+
     /** Take Payment confirm — saves the invoice as Paid with the chosen
    *  method/surcharge recorded on it, prints the payment receipt, then
    *  clears the ticket (same save-and-clear pattern as Done). */
@@ -696,7 +714,7 @@ export default function RepairOrderPage() {
                 <div className="l">Date</div>
                 <div className="v">{invoiceDate}</div>
               </div>
-              {selectedVehicleId && (
+              {selectedVehicleId && status !== "Paid" && (
                 <button
                   className="ro-save-btn"
                   onClick={handleSaveInvoiceClick}
@@ -764,11 +782,13 @@ export default function RepairOrderPage() {
             <InvoiceTotals {...totals} />
             <RepairOrderActions
               disabled={items.length === 0}
+              isPaid={status === "Paid"}
               onPrint={() =>
                 printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer, vehicle, items, totals, paymentMethod, paymentSurcharge })
               }
               onText={() => alert("Text to customer — wire up an SMS provider here")}
               onPay={handlePay}
+              onReprintReceipt={handleReprintReceipt}
             />
             <PaymentPopup
               isOpen={showPay}
