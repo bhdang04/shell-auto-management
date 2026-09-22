@@ -22,6 +22,7 @@ import { saveInvoice, updateInvoiceStatus } from "../api/invoices";
 import { printInvoiceReceipt } from "../lib/printInvoice";
 import PaymentPopup from "../components/PaymentPopup";
 import { openReceiptWindow, printPaymentReceipt } from "../lib/printReceipt";
+import ReportsPopup from "../components/ReportsPopup";
 
 const EMPTY_CUSTOMER = { name: "", addr: "", cityzip: "", phone1: "", phone2: "" };
 // Selecting a vehicle whose most recent invoice has one of these statuses
@@ -96,6 +97,7 @@ export default function RepairOrderPage() {
   const [showPay, setShowPay] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [paymentSurcharge, setPaymentSurcharge] = useState(0);
+  const [reportsOpen, setReportsOpen] = useState(false);
 
   // Keep the editable field in sync whenever the loaded invoice changes for
   // any other reason (arrows, search, picking a customer, clearing).
@@ -637,8 +639,11 @@ export default function RepairOrderPage() {
         onNewRO={clearRO}
         onJumpSearch={handleJumpSearch}
         onShowOpenInvoices={() => setOpenInvoicesOpen(true)}
+        onShowReports={() => setReportsOpen(true)}
         onLogout={signOut}
       />
+
+      <ReportsPopup isOpen={reportsOpen} onClose={() => setReportsOpen(false)} />
 
       <VehiclePickerPopup
         isOpen={vehiclePickerOpen}

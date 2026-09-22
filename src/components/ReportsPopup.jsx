@@ -123,7 +123,15 @@ export default function ReportsPopup({ isOpen, onClose }) {
   }, [isOpen, tab, dailyValue, weeklyValue, monthlyValue]);
 
   const summary = summarizeInvoices(invoices);
-  const methodEntries = Object.entries(summary.byMethod).sort((a, b) => b[1] - a[1]);
+
+  const FIXED_METHODS = ["Cash", "Visa", "Mastercard", "American Express", "Discover", "ATM"];
+  const fixedEntries = FIXED_METHODS.map((m) => [m, summary.byMethod[m] || 0]);
+
+  const otherEntries = Object.entries(summary.byMethod)
+    .filter(([method]) => !FIXED_METHODS.includes(method))
+    .sort((a, b) => b[1] - a[1]);
+
+  const methodEntries = [...fixedEntries, ...otherEntries];
 
   return (
     <Popup isOpen={isOpen} onClose={onClose} title="Reports" variant="console">
