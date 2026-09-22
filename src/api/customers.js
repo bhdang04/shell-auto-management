@@ -63,7 +63,7 @@ export async function getOpenBoard() {
       vehicles ( id, year, make, model, customer_id, customers ( id, name ), appointments ( date ) )
     `
     )
-    .not("status", "in", '("Ready for Pickup","Paid")')
+    .not("status", "in", '("Ready for Pickup","Paid","Voided")')
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data;

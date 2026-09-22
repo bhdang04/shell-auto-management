@@ -114,3 +114,17 @@ export async function saveInvoice({
 
   return invoice;
 }
+
+/** Voids an invoice — sets status to "Voided" and records why + when.
+ *  The row and its line items are kept (not deleted) so the invoice
+ *  number stays accounted for and there's a record of what happened. */
+export async function voidInvoice(invoiceId, reason) {
+  const { data, error } = await supabase
+    .from("invoices")
+    .update({ status: "Voided", void_reason: reason, voided_at: new Date().toISOString() })
+    .eq("id", invoiceId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
