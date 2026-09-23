@@ -46,6 +46,7 @@ export default function QuickActions({
   vehicleId,
   customerId,
   vehicleLabel,
+  invoiceId,
 }) {
   const [activePopup, setActivePopup] = useState(null);
   const close = () => setActivePopup(null);
@@ -65,7 +66,7 @@ export default function QuickActions({
       <QuickJobsPopup isOpen={activePopup === "quickJobs"} onClose={close} onPick={onAddJob} />
       <ProfitPopup isOpen={activePopup === "profit"} onClose={close} totals={totals} />
       <DonePopup isOpen={activePopup === "done"} onClose={close} onConfirm={onMarkDone} />
-      <NotePopup isOpen={activePopup === "note"} onClose={close} />
+      <NotePopup isOpen={activePopup === "note"} onClose={close} invoiceId={invoiceId} />
       <EstimatePopup isOpen={activePopup === "estimate"} onClose={close} items={items} totals={totals} />
       <SchedulePopup
         isOpen={activePopup === "schedule"}

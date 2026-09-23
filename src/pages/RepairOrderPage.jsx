@@ -848,6 +848,7 @@ export default function RepairOrderPage() {
             vehicleId={selectedVehicleId}
             customerId={selectedCustomerId}
             vehicleLabel={[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")}
+            invoiceId={invoiceId}
           />
 
           <div className="bay-invoice">
