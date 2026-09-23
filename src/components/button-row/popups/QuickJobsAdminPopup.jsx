@@ -244,8 +244,7 @@ export default function QuickJobsAdminPopup({ isOpen, onClose }) {
   }
 
   return (
-    <Popup isOpen={isOpen} onClose={onClose} title="Manage Quick Jobs" variant="console">
-        <div className="qja-layout">
+    <Popup isOpen={isOpen} onClose={onClose} title="Manage Quick Jobs" variant="console" className="qja-modal">        <div className="qja-layout">
             <div className="qja-sidebar">
                 <div className="lookup-toolbar">
                     <button className="btn-small" onClick={handleNewJob} style={{ width: "100%" }}>

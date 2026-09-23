@@ -11,7 +11,7 @@ import { useEffect, useRef } from "react";
  *  - variant: "" | "compact" | "drawer" | "console" — controls size/shape via CSS
  *  - children: modal body content
  */
-export default function Popup({ isOpen, onClose, title, variant = "", children }) {
+export default function Popup({ isOpen, onClose, title, variant = "", className = "", children }) {  
   const dialogRef = useRef(null);
 
   useEffect(() => {
@@ -35,10 +35,10 @@ export default function Popup({ isOpen, onClose, title, variant = "", children }
     if (e.target === dialogRef.current) onClose();
   }
 
-  const className = ["popup-modal", variant && `popup-modal--${variant}`].filter(Boolean).join(" ");
+  const dialogClassName = ["popup-modal", variant && `popup-modal--${variant}`, className].filter(Boolean).join(" ");
 
   return (
-    <dialog ref={dialogRef} onCancel={handleCancel} onClick={handleBackdropClick} className={className}>
+    <dialog ref={dialogRef} onCancel={handleCancel} onClick={handleBackdropClick} className={dialogClassName}>
       <div className="popup-header">
         <h2>{title}</h2>
         <button onClick={onClose} className="close-btn" aria-label="Close">
