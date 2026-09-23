@@ -484,6 +484,21 @@ dialog.popup-modal--drawer {
 }
 .field select:focus { outline: none; border-color: var(--accent); }
 
+.board-status-select {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 5px 8px;
+  border-radius: 5px;
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  font-size: 11px;
+  cursor: pointer;
+}
+.board-status-select:hover { border-color: var(--accent); }
+.board-status-select:disabled { opacity: .5; cursor: default; }
+
 @media (max-width: 900px) {
   .ro-grid { grid-template-columns: 1fr; }
   .popup-modal--drawer { max-width: 100vw; }

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import Modal from "./button-row/Modal";
 import { getOpenBoard } from "../api/customers";
 import { getTodaysAppointments } from "../api/appointments";
+import { updateInvoiceStatus } from "../api/invoices";
+import { supabase } from "../lib/supabaseClient";
 
 function money(n) {
   return "$" + Number(n || 0).toFixed(2);
@@ -24,11 +26,14 @@ function groupByStatus(rows) {
     if (!groups[key]) groups[key] = [];
     groups[key].push(row);
   }
-  // Known statuses first, in a sensible order; anything unrecognized
-  // (a status not in STATUS_ORDER) still shows up, just at the end.
-  const known = STATUS_ORDER.filter((s) => groups[s]);
-  const rest = Object.keys(groups).filter((s) => !STATUS_ORDER.includes(s));
-  return [...known, ...rest].map((status) => ({ status, rows: groups[status] }));
+  // Every known status gets a section, even with zero invoices — so the
+  // board always shows the full shape of the shop's workflow, not just
+  // whatever happens to be non-empty right now.
+  const known = STATUS_ORDER.map((status) => ({ status, rows: groups[status] || [] }));
+  const extra = Object.keys(groups)
+    .filter((s) => !STATUS_ORDER.includes(s))
+    .map((status) => ({ status, rows: groups[status] }));
+  return [...known, ...extra];
 }
 
 /**
@@ -36,7 +41,7 @@ function groupByStatus(rows) {
  * Two sections:
  *  - "Expected Today" — today's scheduled appointments whose vehicle
  *    doesn't already have an open invoice (i.e. hasn't checked in yet)
- *  - Open repair orders, grouped by status
+ *  - Open repair orders, grouped by status (every status shown, even empty)
  *
  * Props:
  *  - onSelect(row): fired when an open-invoice row is picked; row includes
@@ -51,10 +56,9 @@ export default function OpenInvoicesPopup({ isOpen, onClose, onSelect, onSelectA
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    setLoading(true);
+  function refresh() {
     Promise.all([getOpenBoard(), getTodaysAppointments()])
       .then(([board, appts]) => {
         setRows(board);
@@ -64,8 +68,33 @@ export default function OpenInvoicesPopup({ isOpen, onClose, onSelect, onSelectA
       .catch((err) => {
         console.error("Failed to load shop board:", err);
         setError(err);
-      })
-      .finally(() => setLoading(false));
+      });
+  }
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setLoading(true);
+    refresh();
+    setLoading(false);
+  }, [isOpen]);
+
+  // Live updates while the drawer is open: any insert/update/delete on
+  // invoices or appointments (status change, new ticket, void, a same-day
+  // booking) re-pulls the board so it never goes stale while someone's
+  // actually looking at it.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const channel = supabase
+      .channel("open-board-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "invoices" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, refresh)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   function handlePick(row) {
@@ -76,6 +105,28 @@ export default function OpenInvoicesPopup({ isOpen, onClose, onSelect, onSelectA
   function handlePickAppointment(appt) {
     onSelectAppointment(appt);
     onClose();
+  }
+
+  /** Changes a row's status right from the board, without opening the
+   *  full ticket. Only among the open-workflow statuses — moving to Paid
+   *  or Voided has its own dedicated flow (Take Payment / Void Invoice)
+   *  that also records payment info or a reason, so those aren't offered
+   *  here. */
+  async function handleStatusChange(row, newStatus) {
+    if (newStatus === row.status) return;
+    setUpdatingId(row.id);
+    try {
+      await updateInvoiceStatus(row.id, newStatus);
+      // The live subscription will also refresh this, but updating
+      // optimistically avoids a visible flicker back to the old value
+      // while waiting on the round trip.
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: newStatus } : r)));
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      alert("Couldn't update status — try again.");
+    } finally {
+      setUpdatingId(null);
+    }
   }
 
   const openVehicleIds = new Set(rows.map((r) => r.vehicles?.id).filter(Boolean));
@@ -111,34 +162,47 @@ export default function OpenInvoicesPopup({ isOpen, onClose, onSelect, onSelectA
               </>
             )}
 
-            {rows.length === 0 && notCheckedIn.length === 0 && (
-              <div className="lookup-empty">Nothing open, nothing expected today.</div>
-            )}
-
             {grouped.map(({ status, rows: statusRows }) => (
               <div key={status}>
                 <div className="board-section-title">
                   {status} <span className="board-section-count">({statusRows.length})</span>
                 </div>
-                {statusRows.map((row) => {
-                  const total = Number(row.labor_total) + Number(row.parts_total) + Number(row.tax);
-                  const scheduledDate = nextAppointmentDate(row);
-                  return (
-                    <div className="lookup-item" key={row.id} onClick={() => handlePick(row)}>
-                      <div className="li-top">
-                        <span className="code">#{row.num}</span>
-                        <span className="desc">
-                          {row.vehicles?.customers?.name} &mdash;{" "}
-                          {[row.vehicles?.year, row.vehicles?.make, row.vehicles?.model].filter(Boolean).join(" ")}
-                        </span>
+                {statusRows.length === 0 ? (
+                  <div className="lookup-empty">Nothing in this status.</div>
+                ) : (
+                  statusRows.map((row) => {
+                    const total = Number(row.labor_total) + Number(row.parts_total) + Number(row.tax);
+                    const scheduledDate = nextAppointmentDate(row);
+                    return (
+                      <div className="lookup-item" key={row.id} onClick={() => handlePick(row)}>
+                        <div className="li-top">
+                          <span className="code">#{row.num}</span>
+                          <span className="desc">
+                            {row.vehicles?.customers?.name} &mdash;{" "}
+                            {[row.vehicles?.year, row.vehicles?.make, row.vehicles?.model].filter(Boolean).join(" ")}
+                          </span>
+                        </div>
+                        {scheduledDate && <div className="li-scheduled">Scheduled date: {scheduledDate}</div>}
+                        <div className="li-bottom">
+                          <span className="price">{money(total)}</span>
+                          <select
+                            className="board-status-select"
+                            value={row.status}
+                            disabled={updatingId === row.id}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => handleStatusChange(row, e.target.value)}
+                          >
+                            {STATUS_ORDER.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
-                      {scheduledDate && <div className="li-scheduled">Scheduled date: {scheduledDate}</div>}
-                      <div className="li-bottom">
-                        <span className="price">{money(total)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             ))}
           </>
