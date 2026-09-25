@@ -9,9 +9,19 @@ export async function searchCustomers(query) {
   if (!query.trim()) return [];
   const { data, error } = await supabase
     .from("customers")
-    .select("id, name, phone1, phone2, addr, cityzip, vehicles(id, year, make, model, engine_specs, plate, vin, odo)")
+    .select("id, name, first_name, last_name, phone1, phone2, addr, cityzip, vehicles(id, year, make, model, engine_specs, plate, vin, odo)")
     .ilike("name", `%${query}%`)
     .limit(10);
+  if (error) throw error;
+  return data;
+}
+
+/** Every customer on file, for the "Customers" catalog browser. */
+export async function getAllCustomers() {
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, name, first_name, last_name, phone1, cityzip, vehicles(id)")
+    .order("name", { ascending: true });
   if (error) throw error;
   return data;
 }
@@ -21,26 +31,17 @@ export async function searchCustomers(query) {
  * invoice + line item on file. This is what populates CustomerForm,
  * VehicleForm, VehicleHistory, and LineItems all at once.
  */
-/** Every customer on file, for the "Customers" catalog browser. */
-export async function getAllCustomers() {
-  const { data, error } = await supabase
-    .from("customers")
-    .select("id, name, phone1, cityzip, vehicles(id)")
-    .order("name", { ascending: true });
-  if (error) throw error;
-  return data;
-}
-
 export async function getCustomerWithHistory(customerId) {
   const { data, error } = await supabase
     .from("customers")
     .select(
       `
-      id, name, addr, cityzip, phone1, phone2,
+      id, name, first_name, last_name, addr, cityzip, phone1, phone2,
       vehicles (
         id, year, make, model, engine_specs, plate, vin, odo,
         invoices (
           id, num, date, status, labor_total, parts_total, tax,
+          payment_method, payment_surcharge,
           line_items ( id, kind, tag, code, description, sub, qty, price, total )
         )
       )
@@ -52,7 +53,6 @@ export async function getCustomerWithHistory(customerId) {
   return data;
 }
 
-/** "Today's board" in the sidebar: customers with at least one open invoice. */
 /** "Open Invoices" panel: every invoice not yet closed out, shop-wide. */
 export async function getOpenBoard() {
   const { data, error } = await supabase
@@ -69,10 +69,10 @@ export async function getOpenBoard() {
   return data;
 }
 
-export async function createCustomer({ name, addr = "", cityzip = "", phone1 = "", phone2 = "" }) {
+export async function createCustomer({ first_name = "", last_name = "", addr = "", cityzip = "", phone1 = "", phone2 = "" }) {
   const { data, error } = await supabase
     .from("customers")
-    .insert({ name, addr, cityzip, phone1, phone2 })
+    .insert({ first_name, last_name, addr, cityzip, phone1, phone2 })
     .select()
     .single();
   if (error) throw error;
@@ -101,12 +101,14 @@ export async function upsertVehicle(vehicleId, customerId, fields) {
 }
 
 /** Powers TopBar's jump search — invoice #, license plate, or VIN.
- *  Returns { customer, vehicleId } so the caller can select the specific
- *  matched vehicle even if the customer has more than one on file. */
+ *  Returns { customer, vehicleId, invoiceId } so the caller can select the
+ *  specific matched vehicle/invoice even if the customer has more than one
+ *  vehicle on file. invoiceId is only set when the match came from an
+ *  invoice number. */
 export async function findCustomerByLookup(query) {
   let q = query.trim();
   if (!q) return null;
-  if (q.startsWith("#")) q = q.slice(1).trim(); // "#13839" should match the same as "13839"
+  if (q.startsWith("#")) q = q.slice(1).trim();
 
   const { data: invoiceMatch } = await supabase
     .from("invoices")
@@ -115,15 +117,9 @@ export async function findCustomerByLookup(query) {
     .maybeSingle();
 
   let vehicleId = invoiceMatch?.vehicle_id || null;
-  // Only set when the match came from an invoice number — a plate/VIN match
-  // has no single specific invoice in mind, so the caller should fall back
-  // to its normal "load most recent open, else blank" behavior for those.
   const invoiceId = invoiceMatch?.id || null;
 
   if (!vehicleId) {
-    // Partial match — a tech usually remembers part of a plate/VIN, not all
-    // of it. .limit(1) is required here: without it, .maybeSingle() throws
-    // if the partial match happens to hit more than one row.
     const { data: vehicleMatch } = await supabase
       .from("vehicles")
       .select("id")

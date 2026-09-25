@@ -225,7 +225,20 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 .bay-line .code input::placeholder { color:var(--muted); text-transform:none; }
 
 .bay-line.comment-line { grid-template-columns: 1fr 28px; }
-.comment-text { font-size:12.5px; color:var(--muted); font-style:italic; line-height:1.5; }
+.comment-line .comment-text-input {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-family: 'Inter';
+  font-size: 12.5px;
+  font-style: italic;
+  line-height: 1.5;
+  width: 100%;
+  padding: 4px 0;
+  text-align: left;
+}
+.comment-text-input:focus { outline: 1px solid var(--accent); border-radius: 3px; color: var(--text); font-style: normal; }
+.comment-text-input::placeholder { color: var(--muted); font-style: normal; }
 
 /* --- Popup / dialog shapes --- */
 dialog.popup-modal {

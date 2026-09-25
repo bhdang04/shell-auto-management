@@ -28,19 +28,24 @@ export default function LineItems({ items, onAddLine, onUpdateLine, onDeleteLine
         <div className="items-empty-row">No line items yet — add labor or parts below.</div>
       ) : (
         items.map((it, i) =>
-          it.kind === "comment" ? (
-            <div className="bay-line comment-line" key={i}>
-              <div className="comment-text">{it.desc}</div>
-              <button
-                className="line-delete"
-                onClick={() => onDeleteLine(i)}
-                aria-label="Remove comment"
-                title="Remove line"
-              >
-                ✕
-              </button>
-            </div>
-          ) : (
+            it.kind === "comment" ? (
+              <div className="bay-line comment-line" key={i}>
+                <input
+                  className="comment-text-input"
+                  value={it.desc}
+                  onChange={(e) => onUpdateLine(i, "desc", e.target.value)}
+                  placeholder="Comment..."
+                />
+                <button
+                  className="line-delete"
+                  onClick={() => onDeleteLine(i)}
+                  aria-label="Remove comment"
+                  title="Remove line"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
             <div className="bay-line" key={i}>
               <div className="code">
                 <input

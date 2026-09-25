@@ -44,7 +44,13 @@ export default function QuickJobsAdminPopup({ isOpen, onClose }) {
     search: catalogSearch,
     setSearch: setCatalogSearch,
     loading: catalogLoading,
+    addItem: addCatalogItem,
   } = useCatalog(itemType);
+
+  const [newItemOpen, setNewItemOpen] = useState(false);
+  const [newItemForm, setNewItemForm] = useState({ code: "", description: "", price: "" });
+  const [savingNewItem, setSavingNewItem] = useState(false);
+  const [newItemError, setNewItemError] = useState(null);
 
   const selectedJob = jobs.find((j) => j.id === selectedJobId) || null;
 
@@ -86,6 +92,9 @@ export default function QuickJobsAdminPopup({ isOpen, onClose }) {
     refreshLines(selectedJobId);
     setAddMode(null);
     setEditingLineId(null);
+    setNewItemOpen(false);
+    setNewItemForm({ code: "", description: "", price: "" });
+    setNewItemError(null);
   }, [selectedJobId]);
 
   function handleSelectJob(job) {
@@ -164,6 +173,28 @@ export default function QuickJobsAdminPopup({ isOpen, onClose }) {
       console.error("Failed to add line:", err);
       alert(err.message || "Failed to add line.");
     }
+  }
+
+    /** Creates a brand-new catalog item (part or labor, whichever tab is
+   *  active) and immediately adds it as a line on this job — for when the
+   *  thing being added doesn't exist in the master catalog yet. */
+  async function handleCreateAndAddItem() {
+    if (!newItemForm.code.trim() || !newItemForm.description.trim()) return;
+    setSavingNewItem(true);
+    setNewItemError(null);
+    const { data, error } = await addCatalogItem({
+      code: newItemForm.code.trim(),
+      description: newItemForm.description,
+      price: parseFloat(newItemForm.price) || 0,
+    });
+    setSavingNewItem(false);
+    if (error) {
+      setNewItemError(error.message || "Couldn't save — check the code isn't already in use.");
+      return;
+    }
+    await handleAddItemLine(data);
+    setNewItemOpen(false);
+    setNewItemForm({ code: "", description: "", price: "" });
   }
 
   async function handleAddCommentLine() {
@@ -442,6 +473,59 @@ export default function QuickJobsAdminPopup({ isOpen, onClose }) {
                         placeholder="Search catalog..."
                         style={{ marginBottom: 12 }}
                       />
+
+                      {!newItemOpen ? (
+                        <button
+                          className="btn-small"
+                          onClick={() => setNewItemOpen(true)}
+                          style={{ width: "100%", marginBottom: 12 }}
+                        >
+                          + New {itemType === "labor" ? "Labor" : "Part"} (not in catalog yet)
+                        </button>
+                      ) : (
+                        <div className="catalog-form">
+                          <div className="field">
+                            <label>Code</label>
+                            <input
+                              value={newItemForm.code}
+                              onChange={(e) => setNewItemForm({ ...newItemForm, code: e.target.value })}
+                              placeholder="e.g. SENS-TX"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="field">
+                            <label>Description</label>
+                            <input
+                              value={newItemForm.description}
+                              onChange={(e) => setNewItemForm({ ...newItemForm, description: e.target.value })}
+                            />
+                          </div>
+                          <div className="field">
+                            <label>Price</label>
+                            <input
+                              value={newItemForm.price}
+                              onChange={(e) => setNewItemForm({ ...newItemForm, price: e.target.value })}
+                            />
+                          </div>
+                          {newItemError && (
+                            <div className="lookup-empty" style={{ color: "var(--bad)" }}>
+                              {newItemError}
+                            </div>
+                          )}
+                          <div className="btn-row">
+                            <button className="btn" onClick={() => setNewItemOpen(false)} disabled={savingNewItem}>
+                              Cancel
+                            </button>
+                            <button
+                              className="btn primary"
+                              onClick={handleCreateAndAddItem}
+                              disabled={savingNewItem || !newItemForm.code.trim() || !newItemForm.description.trim()}
+                            >
+                              {savingNewItem ? "Saving..." : "Add to Catalog & Job"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       <div className="lookup-list qja-catalog-list">
                         {catalogLoading && <div className="lookup-empty">Loading...</div>}
                         {!catalogLoading && catalogItems.length === 0 && <div className="lookup-empty">No matches.</div>}
