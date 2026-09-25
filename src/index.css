@@ -8,10 +8,10 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
    BAY BOARD — industrial shop-floor repair order screen
    ========================================================= */
 .bay {
-  --bg:#17140f; --panel:#211d16; --panel2:#2a251c;
-  --accent:#f2a93b; --accent-soft:#4a3a1f;
-  --text:#f4efe4; --muted:#9c9384; --line:#3a3428;
-  --good:#5cb87f; --bad:#e2543a;
+  --bg:#f0ede4; --panel:#faf8f2; --panel2:#e8e4d8;
+  --accent:#d9922a; --accent-soft:#f0dcb3;
+  --text:#2b2822; --muted:#8c8677; --line:#d4cfc0;
+  --good:#2f8f5b; --bad:#b23a2a;
   background: var(--bg); color: var(--text);
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
