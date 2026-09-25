@@ -16,6 +16,26 @@ export async function searchCustomers(query) {
   return data;
 }
 
+/**
+ * Live search as you type in the First/Last Name fields. Matches on
+ * whichever field(s) have text — typing only a first name searches by
+ * first name, only a last name searches by last name, both narrows to
+ * customers matching both.
+ */
+export async function searchCustomersByName({ firstName = "", lastName = "" }) {
+  let query = supabase
+    .from("customers")
+    .select("id, name, first_name, last_name, phone1, phone2, addr, cityzip, vehicles(id, year, make, model, engine_specs, plate, vin, odo)")
+    .limit(10);
+
+  if (firstName.trim()) query = query.ilike("first_name", `%${firstName.trim()}%`);
+  if (lastName.trim()) query = query.ilike("last_name", `%${lastName.trim()}%`);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
 /** Every customer on file, for the "Customers" catalog browser. */
 export async function getAllCustomers() {
   const { data, error } = await supabase
