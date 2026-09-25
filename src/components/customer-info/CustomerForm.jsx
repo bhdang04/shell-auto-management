@@ -3,7 +3,7 @@ import CustomerSearch from "./CustomerSearch";
 /**
  * CustomerForm
  * Props:
- *  - customer: { name, addr, cityzip, phone1, phone2 }
+ *  - customer: { first_name, last_name, addr, cityzip, phone1, phone2 }
  *  - onFieldChange(field, value): update a single customer field
  *  - onSelectCustomer(customer): a search result was picked
  *  - onCreateNew(name): "create new customer" was picked
@@ -16,6 +16,8 @@ export default function CustomerForm({
   onCreateNew,
   onShowCustomers,
 }) {
+  const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ");
+
   return (
     <div className="ro-card">
       <div className="ro-card-head">
@@ -28,11 +30,35 @@ export default function CustomerForm({
       </div>
 
       <CustomerSearch
-        nameValue={customer.name}
-        onNameChange={(v) => onFieldChange("name", v)}
+        nameValue={fullName}
+        onNameChange={(v) => {
+          const parts = v.trim().split(/\s+/);
+          if (v.trim() === "") {
+            onFieldChange("first_name", "");
+            onFieldChange("last_name", "");
+          } else if (parts.length === 1) {
+            onFieldChange("first_name", parts[0]);
+            onFieldChange("last_name", "");
+          } else {
+            const last = parts.pop();
+            onFieldChange("first_name", parts.join(" "));
+            onFieldChange("last_name", last);
+          }
+        }}
         onSelectCustomer={onSelectCustomer}
         onCreateNew={onCreateNew}
       />
+
+      <div className="field-row">
+        <div className="field">
+          <label>First Name</label>
+          <input value={customer.first_name} onChange={(e) => onFieldChange("first_name", e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Last Name</label>
+          <input value={customer.last_name} onChange={(e) => onFieldChange("last_name", e.target.value)} />
+        </div>
+      </div>
 
       <div className="field-row">
         <div className="field">

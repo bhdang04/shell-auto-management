@@ -25,7 +25,7 @@ import { openReceiptWindow, printPaymentReceipt } from "../lib/printReceipt";
 import ReportsPopup from "../components/ReportsPopup";
 import VoidInvoicePopup from "../components/VoidInvoicePopup";
 
-const EMPTY_CUSTOMER = { name: "", addr: "", cityzip: "", phone1: "", phone2: "" };
+const EMPTY_CUSTOMER = { first_name: "", last_name: "", addr: "", cityzip: "", phone1: "", phone2: "" };
 // Selecting a vehicle whose most recent invoice has one of these statuses
 // starts a fresh ticket instead of reopening the closed one.
 const CLOSED_STATUSES = ["Ready for Pickup", "Paid", "Voided"];
@@ -37,11 +37,29 @@ function todayStr() {
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 }
 
+/** Combines first/last into one display string — used anywhere the UI
+ *  needs "the customer's name" as a single value (heading, print, etc.). */
+function customerFullName(c) {
+  return [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim();
+}
+
+/** Best-effort split of one typed full name into first/last — last word
+ *  becomes the last name, everything before it becomes the first name.
+ *  Same heuristic used to backfill existing customers in the DB migration. */
+function splitFullName(input) {
+  const trimmed = (input || "").trim();
+  if (!trimmed) return { first_name: "", last_name: "" };
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return { first_name: parts[0], last_name: "" };
+  const last_name = parts.pop();
+  return { first_name: parts.join(" "), last_name };
+}
+
 /** Turns the nested Supabase shape (customer -> vehicles -> invoices ->
  *  line_items) into the flat { history: [...] } shape the UI expects.
  *  Sorted newest-first so the arrow navigation has a stable order. */
 function flattenHistory(vehicle) {
-    const list = (vehicle?.invoices || []).map((inv) => ({
+  const list = (vehicle?.invoices || []).map((inv) => ({
     id: inv.id,
     num: inv.num,
     date: inv.date,
@@ -163,6 +181,7 @@ export default function RepairOrderPage() {
     setPaymentMethod(h.paymentMethod || null);
     setPaymentSurcharge(h.paymentSurcharge || 0);
   }
+
   /** Loads one vehicle's fields + invoice history. Doesn't touch customer
    *  info — used both by applyFullCustomer and by switching between an
    *  already-selected customer's other vehicles. */
@@ -217,7 +236,8 @@ export default function RepairOrderPage() {
    *  automatically, when there's only one, or via VehiclePickerPopup). */
   function applyFullCustomer(full, vehicleOverride, invoiceIdOverride) {
     setCustomer({
-      name: full.name,
+      first_name: full.first_name || "",
+      last_name: full.last_name || "",
       addr: full.addr || "",
       cityzip: full.cityzip || "",
       phone1: full.phone1 || "",
@@ -275,7 +295,8 @@ export default function RepairOrderPage() {
       const customerId = row.vehicles.customer_id;
       const full = await getCustomerWithHistory(customerId);
       setCustomer({
-        name: full.name,
+        first_name: full.first_name || "",
+        last_name: full.last_name || "",
         addr: full.addr || "",
         cityzip: full.cityzip || "",
         phone1: full.phone1 || "",
@@ -341,14 +362,6 @@ export default function RepairOrderPage() {
     }
   }
 
-  /** Marks the current ticket closed. If it's already saved, persists the
-   *  status right away; if not, the new status just rides along next time
-   *  Save Invoice is clicked. Either way, selecting this vehicle again later
-   *  will now start a fresh ticket instead of reopening this one. */
-  /** Marks the current ticket closed AND saves it — "Done" should finalize
-   *  the invoice for real, not just flip a status flag on something that
-   *  might not even be saved yet. Reuses the same saveInvoice path as the
-   *  Save Invoice button, just forcing the closed status. */
   /** Marks the current ticket closed AND saves it — "Done" should finalize
    *  the invoice for real, not just flip a status flag on something that
    *  might not even be saved yet. Reuses the same saveInvoice path as the
@@ -357,6 +370,7 @@ export default function RepairOrderPage() {
    *  one that was just closed out. */
   async function handleMarkDone() {
     if (!selectedVehicleId) return;
+    if (status === "Paid" || status === "Voided") return; // already closed out — nothing to mark done
     const closedStatus = "Ready for Pickup";
     setInvoiceSaving(true);
     try {
@@ -393,9 +407,10 @@ export default function RepairOrderPage() {
 
   async function createNewCustomer(name) {
     clearRO();
-    setCustomer((prev) => ({ ...prev, name }));
+    const { first_name, last_name } = splitFullName(name);
+    setCustomer((prev) => ({ ...prev, first_name, last_name }));
     try {
-      const newCustomer = await createCustomer({ name });
+      const newCustomer = await createCustomer({ first_name, last_name });
       const newVehicle = await upsertVehicle(null, newCustomer.id, {});
       setSelectedCustomerId(newCustomer.id);
       setSelectedVehicleId(newVehicle.id);
@@ -419,18 +434,16 @@ export default function RepairOrderPage() {
   }
 
   // --- Explicit save: writes the current customer/vehicle field values
-  // back to Supabase. Only does anything once a customer actually exists
-  // (created via "+ Create new customer" or loaded via search). ---
-    async function handleSaveClick() {
-    if (!customer.name.trim()) return;
+  // back to Supabase. Creates the customer first if this is a from-scratch
+  // entry (typed straight into the form instead of using "+ Create new
+  // customer"). ---
+  async function handleSaveClick() {
+    if (!customerFullName(customer)) return;
     setSaveStatus("saving");
     try {
       let customerId = selectedCustomerId;
 
       if (!customerId) {
-        // No customer created yet — this is a from-scratch entry (typed
-        // straight into the form instead of using "+ Create new
-        // customer"), so create it now using whatever's currently filled in.
         const newCustomer = await createCustomer({ ...customer });
         customerId = newCustomer.id;
         setSelectedCustomerId(customerId);
@@ -589,7 +602,7 @@ export default function RepairOrderPage() {
   }
 
   function handlePay() {
-    setShowPay(true);   // <-- opens the popup
+    setShowPay(true); // <-- opens the popup
   }
 
   async function handleVoidConfirm(reason) {
@@ -618,14 +631,14 @@ export default function RepairOrderPage() {
       finalTotal: totals.due + paymentSurcharge,
       invoiceNum,
       invoiceDate,
-      customer,
+      customer: { ...customer, name: customerFullName(customer) },
       vehicle,
       items,
       totals,
     });
   }
 
-    /** Take Payment confirm — saves the invoice as Paid with the chosen
+  /** Take Payment confirm — saves the invoice as Paid with the chosen
    *  method/surcharge recorded on it, prints the payment receipt, then
    *  clears the ticket (same save-and-clear pattern as Done). */
   async function handlePaymentConfirm({ method, surchargeAmount, finalTotal }) {
@@ -652,7 +665,7 @@ export default function RepairOrderPage() {
         finalTotal,
         invoiceNum: saved.num,
         invoiceDate,
-        customer,
+        customer: { ...customer, name: customerFullName(customer) },
         vehicle,
         items,
         totals,
@@ -683,9 +696,9 @@ export default function RepairOrderPage() {
   }
 
   const roHeading = selectedCustomerId
-    ? `${customer.name} — ${status || "New Repair Order"}`
-    : customer.name
-    ? `New Repair Order — ${customer.name}`
+    ? `${customerFullName(customer)} — ${status || "New Repair Order"}`
+    : customerFullName(customer)
+    ? `New Repair Order — ${customerFullName(customer)}`
     : "New Repair Order";
 
   return (
@@ -725,7 +738,7 @@ export default function RepairOrderPage() {
 
       <div className="bay-body">
         <div className="bay-main">
-                    <div className="ro-topline">
+          <div className="ro-topline">
             <h2>{roHeading}</h2>
             <div className="ro-meta">
               <div className="m">
@@ -793,11 +806,11 @@ export default function RepairOrderPage() {
                     Void Invoice
                   </button>
                 )}
-                {(selectedCustomerId || customer.name.trim()) && (
+                {(selectedCustomerId || customerFullName(customer)) && (
                   <button
                     className={`ro-save-btn ${saveStatus === "error" ? "error" : ""}`}
                     onClick={handleSaveClick}
-                    disabled={saveStatus === "saving" || !customer.name.trim()}
+                    disabled={saveStatus === "saving" || !customerFullName(customer)}
                   >
                     {saveStatus === "saving"
                       ? "Saving..."
@@ -859,7 +872,17 @@ export default function RepairOrderPage() {
               isPaid={status === "Paid"}
               isVoided={status === "Voided"}
               onPrint={() =>
-                printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer, vehicle, items, totals, paymentMethod, paymentSurcharge })
+                printInvoiceReceipt({
+                  invoiceNum,
+                  invoiceDate,
+                  status,
+                  customer: { ...customer, name: customerFullName(customer) },
+                  vehicle,
+                  items,
+                  totals,
+                  paymentMethod,
+                  paymentSurcharge,
+                })
               }
               onText={() => alert("Text to customer — wire up an SMS provider here")}
               onPay={handlePay}
