@@ -119,6 +119,7 @@ export default function RepairOrderPage() {
   const [voidPopupOpen, setVoidPopupOpen] = useState(false);
   const [voiding, setVoiding] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
+  const [vinLookupInProgress, setVinLookupInProgress] = useState(false);
 
   // Keep the editable field in sync whenever the loaded invoice changes for
   // any other reason (arrows, search, picking a customer, clearing).
@@ -796,7 +797,7 @@ export default function RepairOrderPage() {
                   <button
                     className="ro-save-btn"
                     onClick={handleSaveInvoiceClick}
-                    disabled={invoiceSaving || items.length === 0}
+                    disabled={invoiceSaving || items.length === 0 || vinLookupInProgress}
                   >
                     {invoiceSaving ? "Saving..." : invoiceId ? "Save Invoice" : "Save New Invoice"}
                   </button>
@@ -810,10 +811,12 @@ export default function RepairOrderPage() {
                   <button
                     className={`ro-save-btn ${saveStatus === "error" ? "error" : ""}`}
                     onClick={handleSaveClick}
-                    disabled={saveStatus === "saving" || !customerFullName(customer)}
+                    disabled={saveStatus === "saving" || !customerFullName(customer) || vinLookupInProgress}
                   >
                     {saveStatus === "saving"
                       ? "Saving..."
+                      : vinLookupInProgress
+                      ? "Looking up VIN..."
                       : saveStatus === "error"
                       ? "Save failed — retry"
                       : !selectedCustomerId
@@ -848,6 +851,7 @@ export default function RepairOrderPage() {
               vehicleCount={customerVehicles.length}
               onSwitchVehicle={handleSwitchVehicle}
               onAddVehicle={handleAddVehicle}
+              onVinLookupChange={setVinLookupInProgress}
             />
           </div>
 

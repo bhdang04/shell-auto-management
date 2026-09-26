@@ -89,3 +89,11 @@ export function useCatalog(type) {
     deleteItem,
   };
 }
+
+/** Sets every LABOR catalog item to the given price in one shot — used by
+ *  the shop settings screen when the labor rate changes and existing
+ *  entries should move with it. */
+export async function bulkSetLaborPrice(price) {
+  const { error } = await supabase.from("catalog").update({ price }).eq("type", "labor");
+  if (error) throw error;
+}

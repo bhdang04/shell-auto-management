@@ -23,6 +23,7 @@ export default function VehicleForm({
   vehicleCount = 0,
   onSwitchVehicle,
   onAddVehicle,
+  onVinLookupChange, // (isLooking: boolean) — lets the parent block Save while a VIN lookup is in flight
 }) {
   const [vinStatus, setVinStatus] = useState(null); // null | "looking" | "done" | "error"
 
@@ -30,6 +31,7 @@ export default function VehicleForm({
     const vin = vehicle.vin.trim();
     if (vin.length !== 17) return; // not a full VIN yet, nothing to look up
     setVinStatus("looking");
+    onVinLookupChange?.(true);
     try {
       const result = await decodeVin(vin);
       if (!result.make) {
@@ -45,6 +47,8 @@ export default function VehicleForm({
     } catch (err) {
       console.error("VIN decode failed:", err);
       setVinStatus("error");
+    } finally {
+      onVinLookupChange?.(false);
     }
   }
 
