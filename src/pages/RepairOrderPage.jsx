@@ -73,6 +73,7 @@ function flattenHistory(vehicle) {
     tax: Number(inv.tax),
     paymentMethod: inv.payment_method || null,
     paymentSurcharge: Number(inv.payment_surcharge || 0),
+    checkNumber: inv.check_number || null,
     items: (inv.line_items || [])
       .slice()
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
@@ -177,6 +178,7 @@ export default function RepairOrderPage() {
     setDirty(false);
     setPaymentMethod(null);
     setPaymentSurcharge(0);
+    setCheckNumber(null);
   }
 
   function loadInvoiceFromHistory(idx, historyList) {
@@ -191,6 +193,7 @@ export default function RepairOrderPage() {
     setItems(h.items.map((it) => ({ ...it, _tax: h.tax })));
     setPaymentMethod(h.paymentMethod || null);
     setPaymentSurcharge(h.paymentSurcharge || 0);
+    setCheckNumber(h.checkNumber || null);
   }
 
   /** Loads one vehicle's fields + invoice history. Doesn't touch customer
@@ -239,6 +242,7 @@ export default function RepairOrderPage() {
       setItems([]);
       setPaymentMethod(null);
       setPaymentSurcharge(0);
+      setCheckNumber(null);
     }
   }
 
@@ -566,7 +570,7 @@ export default function RepairOrderPage() {
   function deleteLine(index) {
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
-  
+
   const taxRate = shopSettings ? Number(shopSettings.tax_rate) : DEFAULT_TAX_RATE;
 
   const totals = useMemo(() => {
@@ -616,7 +620,7 @@ export default function RepairOrderPage() {
   }
 
   function handlePay() {
-    setShowPay(true); // <-- opens the popup
+    setShowPay(true); // <-- opens the wizard
   }
 
   async function handleVoidConfirm(reason) {
@@ -634,32 +638,20 @@ export default function RepairOrderPage() {
     }
   }
 
-  /** Regenerates the payment receipt for an already-paid, currently-loaded
-   *  invoice — no popup, no re-save, just reprints from what's on file. */
-  function handleReprintReceipt() {
-    const win = openReceiptWindow(); // must happen before any await — none here, but keep it first for consistency
-    printPaymentReceipt({
-      win,
-      method: paymentMethod,
-      surchargeAmount: paymentSurcharge,
-      finalTotal: totals.due + paymentSurcharge,
-      invoiceNum,
-      invoiceDate,
-      customer: { ...customer, name: customerFullName(customer) },
-      vehicle,
-      items,
-      totals,
-    });
-  }
-
-  /** Take Payment confirm — saves the invoice as Paid with the chosen
-   *  method/surcharge recorded on it, prints the payment receipt, then
-   *  clears the ticket (same save-and-clear pattern as Done). */
-  async function handlePaymentConfirm({ method, surchargeAmount, finalTotal }) {
+  /** Take Payment wizard finished — updates mileage, saves the invoice as
+   *  Paid with method/surcharge/check-number recorded, optionally prints
+   *  the invoice (now the final receipt), then clears the ticket. */
+  async function handleTakePaymentComplete({ odometer, method, checkNumber: enteredCheckNumber, surchargeAmount, print }) {
     if (!selectedVehicleId) return;
-    const receiptWin = openReceiptWindow(); // must happen before any await, or the popup gets blocked
+    // Must open the print window before any await, or the popup gets blocked.
+    const invoiceWin = print ? openInvoiceWindow() : null;
     setInvoiceSaving(true);
     try {
+      if (odometer && odometer !== vehicle.odo) {
+        await upsertVehicle(selectedVehicleId, selectedCustomerId, { odo: odometer });
+        setVehicle((prev) => ({ ...prev, odo: odometer }));
+      }
+
       const saved = await saveInvoice({
         invoiceId,
         vehicleId: selectedVehicleId,
@@ -670,31 +662,37 @@ export default function RepairOrderPage() {
         tax: totals.tax,
         paymentMethod: method,
         paymentSurcharge: surchargeAmount,
+        checkNumber: enteredCheckNumber || null,
       });
 
-      printPaymentReceipt({
-        win: receiptWin,
-        method,
-        surchargeAmount,
-        finalTotal,
-        invoiceNum: saved.num,
-        invoiceDate,
-        customer: { ...customer, name: customerFullName(customer) },
-        vehicle,
-        items,
-        totals,
-      });
+      if (print) {
+        printInvoiceReceipt({
+          win: invoiceWin,
+          invoiceNum: saved.num,
+          invoiceDate,
+          status: "Paid",
+          customer: { ...customer, name: customerFullName(customer) },
+          vehicle: { ...vehicle, odo: odometer || vehicle.odo },
+          items,
+          totals: { ...totals, due: totals.due + surchargeAmount },
+          paymentMethod: method,
+          paymentSurcharge: surchargeAmount,
+          checkNumber: enteredCheckNumber || null,
+          shop: shopSettings,
+        });
+      }
 
       setShowPay(false);
       clearRO();
     } catch (err) {
       console.error("Failed to record payment:", err);
       setSaveStatus("error");
+      if (invoiceWin && !invoiceWin.closed) invoiceWin.close();
     } finally {
       setInvoiceSaving(false);
     }
   }
-
+  
   // history is sorted newest-first, so "previous" (older) moves to a
   // higher index, "next" (newer) moves to a lower one. historyIndex===null
   // (the fresh-ticket state) means "start browsing from the most recent".
