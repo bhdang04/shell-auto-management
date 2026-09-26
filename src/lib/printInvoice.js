@@ -1,5 +1,4 @@
-// TODO: move shop info to a settings table/screen once one exists —
-// hardcoded here for now since there's only one shop.
+// Fallback only — used if shop settings haven't loaded yet for some reason.
 export const SHOP = {
   name: "Shell Complete Auto Service",
   addr: "482 Auto Plaza Dr, San Jose, CA 95112",
@@ -27,16 +26,43 @@ export function itemRow(it) {
   </tr>`;
 }
 
+/** Opens a blank print window synchronously — call this FIRST, before any
+ *  await, so the browser still treats it as a direct result of the click
+ *  and doesn't block it as a popup. Pass the returned handle in as `win`. */
+export function openInvoiceWindow() {
+  const win = window.open("", "_blank", "width=850,height=1100");
+  if (!win) {
+    alert("Please allow pop-ups for this site to print invoices.");
+    return null;
+  }
+  win.document.write("<p style='font-family:sans-serif;padding:20px;'>Preparing invoice…</p>");
+  return win;
+}
+
 /**
  * printInvoiceReceipt
- * Opens a new window with a print-ready version of the current invoice
- * (Design 3 — "Detailed Work Order") and triggers the browser print dialog.
+ * Opens a print-ready invoice and triggers the browser print dialog.
  *
- * invoiceNum: number or null (shows "NEW" for an unsaved ticket)
- * items: the same shape used throughout the app —
- *   { kind: 'item'|'comment', tag, code, desc, sub, qty, price, total }
+ * win: optional pre-opened window (from openInvoiceWindow, called before an
+ *   await elsewhere) — if omitted, opens its own window (fine for a plain
+ *   synchronous button click with no await in between).
+ * shop: { name, addr, phone, license_number } — from shop settings.
  */
-export function printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer, vehicle, items, totals, paymentMethod, paymentSurcharge }) {
+export function printInvoiceReceipt({
+  win,
+  invoiceNum,
+  invoiceDate,
+  status,
+  customer,
+  vehicle,
+  items,
+  totals,
+  paymentMethod,
+  paymentSurcharge,
+  checkNumber,
+  shop,
+}) {
+  const shopInfo = shop || SHOP;
   const itemLines = items.filter((it) => it.kind !== "comment");
   const commentLines = items.filter((it) => it.kind === "comment");
 
@@ -44,9 +70,7 @@ export function printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer,
     ? itemLines.map(itemRow).join("")
     : `<tr><td colspan="5" style="color:#888; font-style:italic;">No line items</td></tr>`;
 
-  const notesHtml = commentLines.length
-    ? commentLines.map((c) => `${esc(c.desc)}`).join("<br>")
-    : "";
+  const notesHtml = commentLines.length ? commentLines.map((c) => `${esc(c.desc)}`).join("<br>") : "";
 
   const html = `<!DOCTYPE html>
 <html>
@@ -73,9 +97,10 @@ export function printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer,
   td.r, th.r { text-align:right; }
   .notes { background:#fafaf7; border:1px solid #e5e5e0; border-radius:4px; padding:12px 14px; font-size:11.5px; color:#333; line-height:1.9; }
   .totals { display:flex; justify-content:flex-end; margin-top:14px; }
-  .totals table { width:240px; }
+  .totals table { width:260px; }
   .totals td { border:none; padding:4px; }
   .totals tr.due td { border-top:2px solid #1a1a1a; font-weight:700; font-size:15px; }
+  .totals tr.paid td { padding-top:8px; color:#166534; font-weight:700; }
   .signline { margin-top:34px; display:flex; gap:40px; }
   .signline div { flex:1; border-top:1px solid #333; padding-top:4px; font-size:10.5px; color:#666; }
   @media print { body { padding:0.4in 0.5in; } }
@@ -83,8 +108,8 @@ export function printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer,
 </head>
 <body>
   <div class="head">
-    <h1>${esc(SHOP.name)}</h1>
-    <p>${esc(SHOP.addr)} &middot; ${esc(SHOP.phone)}</p>
+    <h1>${esc(shopInfo.name)}</h1>
+    <p>${esc(shopInfo.addr)} &middot; ${esc(shopInfo.phone)}${shopInfo.license_number ? " &middot; Lic #" + esc(shopInfo.license_number) : ""}</p>
   </div>
 
   <div class="metabar">
@@ -112,28 +137,16 @@ export function printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer,
     <tbody>${itemsHtml}</tbody>
   </table>
 
-  ${
-    notesHtml
-      ? `<h3 class="section">Technician Notes &amp; Recommended Service</h3><div class="notes">${notesHtml}</div>`
-      : ""
-  }
+  ${notesHtml ? `<h3 class="section">Technician Notes &amp; Recommended Service</h3><div class="notes">${notesHtml}</div>` : ""}
 
-    <div class="totals">
+  <div class="totals">
     <table>
       <tr><td>Labor</td><td class="r">${money(totals.labor)}</td></tr>
       <tr><td>Parts</td><td class="r">${money(totals.parts)}</td></tr>
       <tr><td>Sales Tax</td><td class="r">${money(totals.tax)}</td></tr>
-      ${
-        paymentMethod && paymentSurcharge > 0
-          ? `<tr><td>Card Surcharge</td><td class="r">${money(paymentSurcharge)}</td></tr>`
-          : ""
-      }
-      <tr class="due"><td>Total Due</td><td class="r">${money(totals.due + (paymentSurcharge || 0))}</td></tr>
-      ${
-        paymentMethod
-          ? `<tr><td style="padding-top:8px;color:#166534;font-weight:700;">Paid via ${esc(paymentMethod)}</td><td></td></tr>`
-          : ""
-      }
+      ${paymentSurcharge > 0 ? `<tr><td>Card Surcharge</td><td class="r">${money(paymentSurcharge)}</td></tr>` : ""}
+      <tr class="due"><td>Total Due</td><td class="r">${money(totals.due)}</td></tr>
+      ${paymentMethod ? `<tr class="paid"><td>Paid via ${esc(paymentMethod)}${checkNumber ? " #" + esc(checkNumber) : ""}</td><td></td></tr>` : ""}
     </table>
   </div>
 
@@ -146,11 +159,17 @@ export function printInvoiceReceipt({ invoiceNum, invoiceDate, status, customer,
 </body>
 </html>`;
 
-  const win = window.open("", "_blank", "width=850,height=1100");
-  if (!win) {
-    alert("Please allow pop-ups for this site to print invoices.");
-    return;
+  if (win && !win.closed) {
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  } else {
+    const newWin = window.open("", "_blank", "width=850,height=1100");
+    if (!newWin) {
+      alert("Please allow pop-ups for this site to print invoices.");
+      return;
+    }
+    newWin.document.write(html);
+    newWin.document.close();
   }
-  win.document.write(html);
-  win.document.close();
 }

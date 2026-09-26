@@ -20,8 +20,10 @@ import {
 } from "../api/customers";
 import { saveInvoice, updateInvoiceStatus, voidInvoice } from "../api/invoices";
 import { printInvoiceReceipt } from "../lib/printInvoice";
-import PaymentPopup from "../components/PaymentPopup";
-import { openReceiptWindow, printPaymentReceipt } from "../lib/printReceipt";
+import TakePaymentWizard from "../components/TakePaymentWizard";
+import ShopSettingsPopup from "../components/ShopSettingsPopup";
+import { openInvoiceWindow } from "../lib/printInvoice";
+import { getShopSettings } from "../api/settings";
 import ReportsPopup from "../components/ReportsPopup";
 import VoidInvoicePopup from "../components/VoidInvoicePopup";
 
@@ -118,9 +120,17 @@ export default function RepairOrderPage() {
   const [paymentSurcharge, setPaymentSurcharge] = useState(0);
   const [voidPopupOpen, setVoidPopupOpen] = useState(false);
   const [voiding, setVoiding] = useState(false);
-  const [reportsOpen, setReportsOpen] = useState(false);
   const [vinLookupInProgress, setVinLookupInProgress] = useState(false);
+  const [reportsOpen, setReportsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shopSettings, setShopSettings] = useState(null);
+  const [checkNumber, setCheckNumber] = useState(null);
 
+  useEffect(() => {
+    getShopSettings()
+      .then(setShopSettings)
+      .catch((err) => console.error("Failed to load shop settings:", err));
+  }, []);
   // Keep the editable field in sync whenever the loaded invoice changes for
   // any other reason (arrows, search, picking a customer, clearing).
   useEffect(() => {
@@ -556,17 +566,20 @@ export default function RepairOrderPage() {
   function deleteLine(index) {
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
+  
+  const taxRate = shopSettings ? Number(shopSettings.tax_rate) : DEFAULT_TAX_RATE;
 
   const totals = useMemo(() => {
     const labor = items.filter((i) => i.tag === "LABOR").reduce((s, i) => s + i.total, 0);
     const parts = items.filter((i) => i.tag === "PART").reduce((s, i) => s + i.total, 0);
+    // Parts are taxed; labor is not.
     const tax = items.length
       ? items[0]._tax !== undefined
         ? items[0]._tax
-        : Math.round((labor + parts) * DEFAULT_TAX_RATE * 100) / 100
+        : Math.round(parts * taxRate * 100) / 100
       : 0;
     return { labor, parts, tax, due: labor + parts + tax };
-  }, [items]);
+  }, [items, taxRate]);
 
   /** Saves the current ticket to Supabase — creates the invoice if this is
    *  a new one, otherwise updates it, then fully replaces its line items.
