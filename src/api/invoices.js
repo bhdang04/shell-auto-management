@@ -68,11 +68,13 @@ export async function saveInvoice({
   tax,
   paymentMethod,
   paymentSurcharge,
+  checkNumber,
 }) {
   const invoiceFields = { status, labor_total: laborTotal, parts_total: partsTotal, tax };
   if (paymentMethod !== undefined) invoiceFields.payment_method = paymentMethod;
   if (paymentSurcharge !== undefined) invoiceFields.payment_surcharge = paymentSurcharge;
-
+  if (checkNumber !== undefined) invoiceFields.check_number = checkNumber;
+  
   let invoice;
   if (invoiceId) {
     const { data, error } = await supabase

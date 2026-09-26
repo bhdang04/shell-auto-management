@@ -61,7 +61,7 @@ export async function getCustomerWithHistory(customerId) {
         id, year, make, model, engine_specs, plate, vin, odo,
         invoices (
           id, num, date, status, labor_total, parts_total, tax,
-          payment_method, payment_surcharge,
+          payment_method, payment_surcharge, check_number,
           line_items ( id, kind, tag, code, description, sub, qty, price, total )
         )
       )
