@@ -11,7 +11,7 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
   --bg:#f0ede4; --panel:#faf8f2; --panel2:#e8e4d8;
   --accent:#d9922a; --accent-soft:#f0dcb3;
   --text:#2b2822; --muted:#8c8677; --line:#d4cfc0;
-  --good:#2f8f5b; --bad:#b23a2a;
+  --good:#2f8f5b; --bad:#393231;
   background: var(--bg); color: var(--text);
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
@@ -22,13 +22,13 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 .bay-top {
   display:flex; align-items:center; justify-content:space-between;
   padding: 18px 28px; border-bottom: 2px solid var(--accent);
-  background: var(--panel);
+  background: #E0A02F;
 }
 
 .bay-logo { display:flex; align-items:center; gap:12px; }
-.bay-logo .mark { width:38px; height:38px; border:2px solid var(--accent); border-radius:6px; display:flex; align-items:center; justify-content:center; color:var(--accent); font-family:'Oswald'; font-weight:700; font-size:18px; transform:rotate(-4deg); }
+.bay-logo .mark { width:38px; height:38px; border:2px solid var(--text); border-radius:6px; display:flex; align-items:center; justify-content:center; color:var(--text); font-family:'Oswald'; font-weight:700; font-size:18px; transform:rotate(-4deg); }
 .bay-logo h1 { font-family:'Oswald'; font-weight:600; font-size:20px; letter-spacing:.03em; text-transform:uppercase; color:var(--text); }
-.bay-logo span { display:block; font-size:11px; color:var(--muted); letter-spacing:.12em; text-transform:uppercase; margin-top:2px; }
+.bay-logo span { display:block; font-size:11px; color:var(--text); letter-spacing:.12em; text-transform:uppercase; margin-top:2px; }
 .bay-search { flex:1; max-width:420px; margin:0 24px; position: relative; }
 .bay-search input { width:100%; background:var(--bg); border:1px solid var(--line); color:var(--text); padding:11px 40px 11px 14px; border-radius:6px; font-size:14px; }
 .bay-search input::placeholder { color:var(--muted); }
@@ -46,9 +46,11 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 }
 .bay-new { background:var(--accent); color:#1a1206; border:none; padding:11px 20px; border-radius:6px; font-weight:700; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.04em; font-size:13px; cursor:pointer; }
 .bay-open-invoices { background:none; border:1px solid var(--line); color:var(--text); padding:11px 16px; border-radius:6px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; font-size:12px; cursor:pointer; margin-left:10px; }
-.bay-open-invoices:hover { border-color:var(--accent); color:var(--accent); }
+.bay-open-invoices:hover { border-color:var(--text); color:var(--text); }
 .bay-reports { background:none; border:1px solid var(--line); color:var(--text); padding:11px 16px; border-radius:6px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; font-size:12px; cursor:pointer; margin-left:10px; }
-.bay-reports:hover { border-color:var(--accent); color:var(--accent); }
+.bay-reports:hover { border-color:var(--text); color:var(--text); }
+.bay-settings { background:none; border:1px solid var(--line); color:var(--text); padding:11px 16px; border-radius:6px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; font-size:12px; cursor:pointer; margin-left:10px; }
+.bay-settings:hover { border-color:var(--text); color:var(--text); }
 .bay-logout { background:none; border:1px solid var(--line); color:var(--muted); padding:11px 16px; border-radius:6px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; font-size:12px; cursor:pointer; margin-left:10px; }
 .bay-logout:hover { border-color:var(--bad); color:var(--bad); }
 

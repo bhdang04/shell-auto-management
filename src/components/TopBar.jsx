@@ -12,7 +12,9 @@ import { useState } from "react";
  *  - onShowSettings(): opens the shop settings panel
  *  - onLogout(): optional — shows a Log Out link when provided
  */
-export default function TopBar({ onNewRO, onJumpSearch, onShowOpenInvoices, onShowReports, onShowSettings, onLogout }) {  const [searching, setSearching] = useState(false);
+export default function TopBar({ onNewRO, onJumpSearch, onShowOpenInvoices, onShowReports, onShowSettings, onLogout }) {
+  const [query, setQuery] = useState("");
+  const [searching, setSearching] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
   async function runSearch() {

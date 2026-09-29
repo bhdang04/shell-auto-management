@@ -19,10 +19,9 @@ import {
   upsertVehicle,
 } from "../api/customers";
 import { saveInvoice, updateInvoiceStatus, voidInvoice } from "../api/invoices";
-import { printInvoiceReceipt } from "../lib/printInvoice";
+import { printInvoiceReceipt, openInvoiceWindow } from "../lib/printInvoice";
 import TakePaymentWizard from "../components/TakePaymentWizard";
 import ShopSettingsPopup from "../components/ShopSettingsPopup";
-import { openInvoiceWindow } from "../lib/printInvoice";
 import { getShopSettings } from "../api/settings";
 import ReportsPopup from "../components/ReportsPopup";
 import VoidInvoicePopup from "../components/VoidInvoicePopup";
@@ -692,7 +691,7 @@ export default function RepairOrderPage() {
       setInvoiceSaving(false);
     }
   }
-  
+
   // history is sorted newest-first, so "previous" (older) moves to a
   // higher index, "next" (newer) moves to a lower one. historyIndex===null
   // (the fresh-ticket state) means "start browsing from the most recent".
@@ -720,10 +719,12 @@ export default function RepairOrderPage() {
         onJumpSearch={handleJumpSearch}
         onShowOpenInvoices={() => setOpenInvoicesOpen(true)}
         onShowReports={() => setReportsOpen(true)}
+        onShowSettings={() => setSettingsOpen(true)}
         onLogout={signOut}
       />
 
       <ReportsPopup isOpen={reportsOpen} onClose={() => setReportsOpen(false)} />
+      <ShopSettingsPopup isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={setShopSettings} />
 
       <VehiclePickerPopup
         isOpen={vehiclePickerOpen}
@@ -897,17 +898,20 @@ export default function RepairOrderPage() {
                   totals,
                   paymentMethod,
                   paymentSurcharge,
+                  checkNumber,
+                  shop: shopSettings,
                 })
               }
               onText={() => alert("Text to customer — wire up an SMS provider here")}
               onPay={handlePay}
-              onReprintReceipt={handleReprintReceipt}
             />
-            <PaymentPopup
+            <TakePaymentWizard
               isOpen={showPay}
               onClose={() => setShowPay(false)}
               total={totals.due}
-              onConfirm={handlePaymentConfirm}
+              currentOdometer={vehicle.odo}
+              saving={invoiceSaving}
+              onComplete={handleTakePaymentComplete}
             />
             <VoidInvoicePopup
               isOpen={voidPopupOpen}
