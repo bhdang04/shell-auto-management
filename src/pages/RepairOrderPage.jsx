@@ -79,16 +79,17 @@ function flattenHistory(vehicle) {
       .map((li) =>
         li.kind === "comment"
           ? { kind: "comment", tag: null, code: "", desc: li.description, sub: "", qty: "", price: "", total: 0 }
-          : {
-              kind: "item",
-              tag: li.tag,
-              code: li.code || "",
-              desc: li.description,
-              sub: li.sub || "",
-              qty: li.qty === null ? "" : String(li.qty),
-              price: li.price === null ? "" : Number(li.price),
-              total: li.total === null ? 0 : Number(li.total),
-            }
+            : {
+                kind: "item",
+                tag: li.tag,
+                code: li.code || "",
+                desc: li.description,
+                sub: li.sub || "",
+                condition: li.condition || "",   // NEW
+                qty: li.qty === null ? "" : String(li.qty),
+                price: li.price === null ? "" : Number(li.price),
+                total: li.total === null ? 0 : Number(li.total),
+          }
       ),
   }));
   return list.sort((a, b) => Number(b.num) - Number(a.num));
@@ -508,6 +509,7 @@ export default function RepairOrderPage() {
         code: catalogItem.code,
         desc: catalogItem.description,
         sub: "",
+        condition: catalogItem.condition || "",   // NEW ("" = New, "U", "R")
         qty: "1",
         price: catalogItem.price,
         total: catalogItem.price,

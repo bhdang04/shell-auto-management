@@ -106,6 +106,7 @@ export async function saveInvoice({
       code: it.kind === "comment" ? "" : it.code || "",
       description: it.desc || "",
       sub: it.sub || "",
+      condition: it.kind === "comment" || it.tag !== "PART" ? null : it.condition || null,  // NEW
       qty: it.qty === "" || it.qty === undefined ? null : parseFloat(it.qty),
       price: it.price === "" || it.price === undefined ? null : parseFloat(it.price),
       sort_order: i,

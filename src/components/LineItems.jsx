@@ -56,6 +56,9 @@ export default function LineItems({ items, onAddLine, onUpdateLine, onDeleteLine
               </div>
               <div className="desc">
                 <input value={it.desc} onChange={(e) => onUpdateLine(i, "desc", e.target.value)} />
+                {it.condition ? (
+                  <span className="cond-tag" style={{ fontWeight: 700, marginLeft: 6 }}>({it.condition})</span>
+                ) : null}
                 {it.sub ? <span>{it.sub}</span> : null}
               </div>
               <div className="num">
