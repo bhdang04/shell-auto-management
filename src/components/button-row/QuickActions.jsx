@@ -43,6 +43,7 @@ export default function QuickActions({
   onMarkDone,
   items,
   totals,
+  onEstimate,
   vehicleId,
   customerId,
   vehicleLabel,
@@ -67,7 +68,13 @@ export default function QuickActions({
       <ProfitPopup isOpen={activePopup === "profit"} onClose={close} totals={totals} />
       <DonePopup isOpen={activePopup === "done"} onClose={close} onConfirm={onMarkDone} />
       <NotePopup isOpen={activePopup === "note"} onClose={close} invoiceId={invoiceId} />
-      <EstimatePopup isOpen={activePopup === "estimate"} onClose={close} items={items} totals={totals} />
+      <EstimatePopup
+        isOpen={activePopup === "estimate"}
+        onClose={close}
+        items={items}
+        totals={totals}
+        onPrint={onEstimate}
+      />
       <SchedulePopup
         isOpen={activePopup === "schedule"}
         onClose={close}

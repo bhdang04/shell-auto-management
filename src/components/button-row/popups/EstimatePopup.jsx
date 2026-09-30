@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Modal from "../Modal";
 
-const TABS = ["Line Items", "Customer View", "Send"];
+const TABS = ["Line Items", "Customer View"];
 
 function money(n) {
   return "$" + Number(n || 0).toFixed(2);
@@ -18,7 +18,7 @@ function money(n) {
  *
  * Props: items (current ticket items), totals = { labor, parts, tax, due }
  */
-export default function EstimatePopup({ isOpen, onClose, items, totals }) {
+export default function EstimatePopup({ isOpen, onClose, items, totals, onPrint }) {
   const [tab, setTab] = useState(TABS[0]);
   const realItems = (items || []).filter((it) => it.kind !== "comment");
   const t = totals || { labor: 0, parts: 0, tax: 0, due: 0 };
@@ -81,8 +81,15 @@ export default function EstimatePopup({ isOpen, onClose, items, totals }) {
         <button className="btn" onClick={onClose}>
           Close
         </button>
-        <button className="btn primary" onClick={() => alert("Send integration not connected yet.")}>
-          Send to Customer
+        <button
+          className="btn primary"
+          disabled={realItems.length === 0}
+          onClick={() => {
+            onPrint?.();
+            onClose();
+          }}
+        >
+          Print Estimate
         </button>
       </div>
     </Modal>

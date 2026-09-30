@@ -33,6 +33,8 @@ function partRow(it) {
   const qty = it.qty === "" || it.qty === undefined ? "—" : it.qty;
   const price = it.price === "" || it.price === undefined ? "—" : money(it.price);
   const total = it.qty === "" || it.price === "" ? "—" : money(it.total);
+  // (U) used / (R) rebuilt goes FIRST so the ellipsis never clips it.
+  // New parts have no condition and print with no tag.
   const cond = it.condition ? `<b>(${esc(it.condition)})</b> ` : "";
   return `<tr><td>${cond}${esc(it.desc)}</td><td class="r">${esc(qty)}</td><td class="r">${price}</td><td class="r">${total}</td></tr>`;
 }
@@ -134,6 +136,10 @@ export function openInvoiceWindow() {
  * the totals, acceptance signature and "Payment Using" box on the right
  * (narrow).
  *
+ * Pass status: "Estimate" to print an estimate — the header reads
+ * "Estimate #..." instead of "Invoice #..." and the "Payment Using" box
+ * is left off.
+ *
  * win: optional pre-opened window (from openInvoiceWindow, called before an
  *   await elsewhere) — if omitted, opens its own window.
  * shop: { name, addr, phone, license_number } — from shop settings.
@@ -155,6 +161,9 @@ export function printInvoiceReceipt({
   const shopInfo = shop || SHOP;
   const { laborGroups, partGroups, orphanNotes } = groupItemsWithNotes(items);
 
+  const isEstimate = status === "Estimate";
+  const docLabel = isEstimate ? "Estimate" : "Invoice";
+
   const laborHtml = buildColumnHtml(laborGroups, laborRow);
   const partsHtml = buildColumnHtml(partGroups, partRow);
 
@@ -169,7 +178,7 @@ export function printInvoiceReceipt({
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Invoice ${invoiceNum ? "#" + invoiceNum : ""}</title>
+<title>${docLabel} ${invoiceNum ? "#" + invoiceNum : ""}</title>
 <style>
   * { box-sizing:border-box; margin:0; padding:0; }
   body { font-family:Arial, Helvetica, sans-serif; color:#111; padding:0.3in; background:#f0ede4; }
@@ -259,7 +268,7 @@ export function printInvoiceReceipt({
     </div>
 
     <div class="invmeta-line">
-      <span style="text-align:left">Invoice <b>${invoiceNum ? "#" + esc(invoiceNum) : "NEW"}</b></span>
+      <span style="text-align:left">${docLabel} <b>${invoiceNum ? "#" + esc(invoiceNum) : "NEW"}</b></span>
       <span style="text-align:center">Date <b>${esc(invoiceDate)}</b></span>
       <span style="text-align:right">Status <b>${esc(status || "Open")}</b></span>
     </div>
@@ -343,7 +352,11 @@ export function printInvoiceReceipt({
           <div class="cap2">I accept the charges and terms of this agreement.</div>
         </div>
 
-        <div class="pay">Payment Using: ${paymentMethod ? `<b>${paymentLabel}</b>` : `<span class="blankline"></span>`}</div>
+        ${
+          isEstimate
+            ? ""
+            : `<div class="pay">Payment Using: ${paymentMethod ? `<b>${paymentLabel}</b>` : `<span class="blankline"></span>`}</div>`
+        }
       </div>
     </div>
   </div>

@@ -624,6 +624,23 @@ export default function RepairOrderPage() {
     setShowPay(true); // <-- opens the wizard
   }
 
+  function handlePrintEstimate() {
+    if (items.length === 0) return;
+    printInvoiceReceipt({
+      invoiceNum,
+      invoiceDate,
+      status: "Estimate",
+      customer: { ...customer, name: customerFullName(customer) },
+      vehicle,
+      items,
+      totals,
+      paymentMethod: null,      // an estimate should never show "Paid via..."
+      paymentSurcharge: 0,
+      checkNumber: null,
+      shop: shopSettings,
+    });
+  }
+
   async function handleVoidConfirm(reason) {
     if (!invoiceId) return;
     setVoiding(true);
@@ -874,6 +891,7 @@ export default function RepairOrderPage() {
             onAddLabor={(item) => addLineFromCatalog("LABOR", item)}
             onAddJob={addLinesFromJob}
             onMarkDone={handleMarkDone}
+            onEstimate={handlePrintEstimate}
             items={items}
             totals={totals}
             vehicleId={selectedVehicleId}
