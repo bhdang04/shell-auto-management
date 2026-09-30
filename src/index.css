@@ -45,14 +45,22 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
   font-size:12.5px; padding:8px 12px; border-radius:6px; z-index:50;
 }
 .bay-new { background:var(--accent); color:#1a1206; border:none; padding:11px 20px; border-radius:6px; font-weight:700; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.04em; font-size:13px; cursor:pointer; }
-.bay-open-invoices { background:none; border:1px solid var(--line); color:var(--text); padding:11px 16px; border-radius:6px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; font-size:12px; cursor:pointer; margin-left:10px; }
-.bay-open-invoices:hover { border-color:var(--text); color:var(--text); }
-.bay-reports { background:none; border:1px solid var(--line); color:var(--text); padding:11px 16px; border-radius:6px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; font-size:12px; cursor:pointer; margin-left:10px; }
-.bay-reports:hover { border-color:var(--text); color:var(--text); }
-.bay-settings { background:none; border:1px solid var(--line); color:var(--text); padding:11px 16px; border-radius:6px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; font-size:12px; cursor:pointer; margin-left:10px; }
-.bay-settings:hover { border-color:var(--text); color:var(--text); }
-.bay-logout { background:none; border:1px solid var(--line); color:var(--muted); padding:11px 16px; border-radius:6px; font-family:'Oswald'; text-transform:uppercase; letter-spacing:.03em; font-size:12px; cursor:pointer; margin-left:10px; }
-.bay-logout:hover { border-color:var(--bad); color:var(--bad); }
+.bay-open-invoices, .bay-reports, .bay-settings {
+  background:#2b2822; border:1px solid #2b2822; color:#f0ede4;
+  padding:11px 16px; border-radius:6px; font-family:'Oswald';
+  text-transform:uppercase; letter-spacing:.03em; font-size:12px;
+  cursor:pointer; margin-left:10px; transition: all .15s ease;
+}
+.bay-open-invoices:hover, .bay-reports:hover, .bay-settings:hover {
+  background:#3d382e; border-color:#3d382e;
+}
+.bay-logout {
+  background:none; border:1px solid rgba(43,40,34,.4); color:#2b2822;
+  padding:11px 16px; border-radius:6px; font-family:'Oswald';
+  text-transform:uppercase; letter-spacing:.03em; font-size:12px;
+  cursor:pointer; margin-left:10px; transition: all .15s ease;
+}
+.bay-logout:hover { border-color:var(--bad); color:var(--bad); background:rgba(255,255,255,.15); }
 
 /* --- Login screen --- */
 .login-screen {
