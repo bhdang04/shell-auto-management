@@ -12,7 +12,7 @@ export const SHOP = {
 // (item, note, blank) is the same fixed height in the CSS below, so this
 // number is the only thing that controls table height. Tune it if the
 // invoice runs long/short on your actual printer.
-const TARGET_ROWS = 20;
+const TARGET_ROWS = 19;
 
 export function money(n) {
   return "$" + Number(n || 0).toFixed(2);
@@ -225,7 +225,7 @@ export function printInvoiceReceipt({
   .toprow > .box:first-child { display:flex; flex-direction:column; }
   .appr-head { display:grid; grid-template-columns:.8fr .8fr 1fr 1.3fr; background:#dcdcdc; border-bottom:1px solid #000; font-size:8.5px; font-weight:700; text-transform:uppercase; padding:4px 6px; }
   .appr-body { flex:1; min-height:38px; }
-  .ack { border-top:1px solid #333; margin:0 8px 6px; padding-top:3px; font-size:9px; text-align:center; color:#333; }
+  .ack { border-top:1px solid #333; margin:0 8px 6px; padding-top:3px; font-size:12px; text-align:center; color:#333; }
   .notice { padding:6px 8px; font-size:10px; color:#333; line-height:1.4; display:flex; flex-direction:column; justify-content:space-between; gap:6px; }
   .notice .sep { border-top:1px solid #000; margin:0 -8px; }
   .notice b { font-size:10.5px; }
