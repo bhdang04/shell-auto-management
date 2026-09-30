@@ -112,6 +112,11 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 .bay-line { display:grid; grid-template-columns: 72px 1fr 55px 85px 85px 28px; gap:10px; align-items:center; padding:13px 24px; border-bottom:1px solid var(--line); font-size:13.5px; }
 .bay-line.hd { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; padding-top:14px; padding-bottom:10px; }
 .bay-line .desc span { color:var(--muted); font-size:12px; }
+.bay-line .desc-row { display:flex; align-items:center; gap:6px; }
+.bay-line .desc .cond-tag {
+  font-family:'JetBrains Mono'; font-size:12px; font-weight:700;
+  color:var(--accent); flex-shrink:0;
+}
 .bay-line .num { font-family:'JetBrains Mono'; text-align:right; }
 .line-delete {
   background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px;
