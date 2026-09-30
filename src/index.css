@@ -213,13 +213,22 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 
 .veh-history { margin-top:12px; border-top:1px solid var(--line); padding-top:12px; }
 .veh-history .vh-title { font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:8px; }
-.vh-item { display:flex; justify-content:space-between; align-items:center; padding:8px 0; cursor:pointer; border-bottom:1px dashed var(--line); }
+
+/* fixed-height scroll box: newest visit on top, older ones a scroll away */
+.vh-scroll { max-height:118px; overflow-y:auto; overscroll-behavior:contain; padding-right:6px; }
+.vh-scroll::-webkit-scrollbar { width:8px; }
+.vh-scroll::-webkit-scrollbar-track { background:transparent; }
+.vh-scroll::-webkit-scrollbar-thumb { background:var(--line); border-radius:4px; }
+.vh-scroll::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+
+.vh-item { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:8px 0; cursor:pointer; border-bottom:1px dashed var(--line); }
 .vh-item:last-child { border-bottom:none; }
 .vh-item:hover .vh-desc { color:var(--accent); }
+.vh-left { min-width:0; }
 .vh-left .vh-num { font-family:'JetBrains Mono'; font-size:11px; color:var(--muted); }
 .vh-left .vh-desc { font-size:12.5px; margin-top:1px; }
-.vh-right { text-align:right; }
-.vh-right .vh-amt { font-family:'JetBrains Mono'; font-size:13px; font-weight:700; }
+.vh-tag { color:var(--accent); }
+.vh-amt { font-family:'JetBrains Mono'; font-size:13px; font-weight:700; flex-shrink:0; }
 .vh-empty { font-size:12.5px; color:var(--muted); font-style:italic; padding:4px 0; }
 
 .items-empty-row { padding:24px; text-align:center; color:var(--muted); font-size:13px; border-bottom:1px solid var(--line); }

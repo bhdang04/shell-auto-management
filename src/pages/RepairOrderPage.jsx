@@ -498,6 +498,13 @@ export default function RepairOrderPage() {
     setItems((prev) => [...prev, { kind: "item", tag, code: "", desc, sub: "", qty: "1", price: 0, total: 0 }]);
   }
 
+  function addComment() {
+    setItems((prev) => [
+      ...prev,
+      { kind: "comment", tag: null, code: "", desc: "", sub: "", qty: "", price: "", total: 0 },
+    ]);
+  }
+
   /** Called when a row is picked in PartsPopup/LaborPopup — qty defaults to
    *  1 and the tech adjusts it right on the ticket, same as any other line. */
   function addLineFromCatalog(tag, catalogItem) {
@@ -577,14 +584,14 @@ export default function RepairOrderPage() {
   const totals = useMemo(() => {
     const labor = items.filter((i) => i.tag === "LABOR").reduce((s, i) => s + i.total, 0);
     const parts = items.filter((i) => i.tag === "PART").reduce((s, i) => s + i.total, 0);
-    // Parts are taxed; labor is not.
-    const tax = items.length
-      ? items[0]._tax !== undefined
+    // Parts are taxed; labor is not. Closed invoices keep their stored tax.
+    const isClosed = status === "Paid" || status === "Voided";
+    const tax =
+      isClosed && items.length && items[0]._tax !== undefined
         ? items[0]._tax
-        : Math.round(parts * taxRate * 100) / 100
-      : 0;
+        : Math.round(parts * taxRate * 100) / 100;
     return { labor, parts, tax, due: labor + parts + tax };
-  }, [items, taxRate]);
+  }, [items, taxRate, status]);
 
   /** Saves the current ticket to Supabase — creates the invoice if this is
    *  a new one, otherwise updates it, then fully replaces its line items.
@@ -901,7 +908,7 @@ export default function RepairOrderPage() {
           />
 
           <div className="bay-invoice">
-            <LineItems items={items} onAddLine={addLine} onUpdateLine={updateLine} onDeleteLine={deleteLine} />
+            <LineItems items={items} onAddLine={addLine} onAddComment={addComment} onUpdateLine={updateLine} onDeleteLine={deleteLine} />
             <InvoiceTotals {...totals} />
             <RepairOrderActions
               disabled={items.length === 0}

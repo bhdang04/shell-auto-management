@@ -11,8 +11,9 @@ function money(n) {
  *  - onAddLine(tag): append a blank labor/part row
  *  - onUpdateLine(index, field, value): edit code/desc/qty/price on an existing row
  *  - onDeleteLine(index): remove a row
+ *  - onAddComment(): append a blank comment row
  */
-export default function LineItems({ items, onAddLine, onUpdateLine, onDeleteLine }) {
+export default function LineItems({ items, onAddLine, onAddComment, onUpdateLine, onDeleteLine }) {
   return (
     <>
       <div className="bay-line hd">
@@ -92,6 +93,7 @@ export default function LineItems({ items, onAddLine, onUpdateLine, onDeleteLine
       <div className="add-line-btns">
         <button onClick={() => onAddLine("LABOR")}>+ Add Labor</button>
         <button onClick={() => onAddLine("PART")}>+ Add Part</button>
+        <button onClick={() => onAddComment()}>+ Add Comment</button>
       </div>
     </>
   );
