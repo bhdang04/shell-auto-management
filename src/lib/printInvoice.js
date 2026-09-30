@@ -33,7 +33,8 @@ function partRow(it) {
   const qty = it.qty === "" || it.qty === undefined ? "—" : it.qty;
   const price = it.price === "" || it.price === undefined ? "—" : money(it.price);
   const total = it.qty === "" || it.price === "" ? "—" : money(it.total);
-  return `<tr><td>${esc(it.desc)}</td><td class="r">${esc(qty)}</td><td class="r">${price}</td><td class="r">${total}</td></tr>`;
+  const cond = it.condition ? `<b>(${esc(it.condition)})</b> ` : "";
+  return `<tr><td>${cond}${esc(it.desc)}</td><td class="r">${esc(qty)}</td><td class="r">${price}</td><td class="r">${total}</td></tr>`;
 }
 
 function noteRow(text, isLast) {
