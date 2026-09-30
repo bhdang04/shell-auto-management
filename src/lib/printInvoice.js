@@ -7,11 +7,12 @@ export const SHOP = {
 };
 
 // How many total rows (real item rows + note rows + blank rows) each
-// column is padded out to, so the invoice fills a full page like a real
-// pre-printed pad even on a light ticket, and both columns stay the same
-// height regardless of which side has more real content. Tune this if it
-// runs long/short on your actual printer.
-const TARGET_ROWS = 25;
+// column is padded out to, so both columns stay the same height and the
+// Total Labor / Total Parts lines always sit on the same line. Every row
+// (item, note, blank) is the same fixed height in the CSS below, so this
+// number is the only thing that controls table height. Tune it if the
+// invoice runs long/short on your actual printer.
+const TARGET_ROWS = 20;
 
 export function money(n) {
   return "$" + Number(n || 0).toFixed(2);
@@ -124,11 +125,13 @@ export function openInvoiceWindow() {
 
 /**
  * printInvoiceReceipt
- * Opens a print-ready invoice: a centered shop header (name / license /
- * address+phone), a right-aligned invoice #/date/status line, a
- * customer+vehicle info box, then two side-by-side Labor and Parts &
- * Lubricants tables — each comment attached as its own note row directly
- * under the item it followed, both columns padded to a full page.
+ * Opens a print-ready invoice: a centered shop header, an invoice # (left) /
+ * date (center) / status (right) line, a compact customer+vehicle info box,
+ * two side-by-side Labor and Parts & Lubricants tables (every row the same
+ * height, comments attached as note rows under their item), then a bottom
+ * section with the approval/notice/authorization boxes on the left (wide) and
+ * the totals, acceptance signature and "Payment Using" box on the right
+ * (narrow).
  *
  * win: optional pre-opened window (from openInvoiceWindow, called before an
  *   await elsewhere) — if omitted, opens its own window.
@@ -156,6 +159,11 @@ export function printInvoiceReceipt({
 
   const finalTotal = Number(totals.due) + Number(paymentSurcharge || 0);
 
+  // e.g. "CASH" or "CHECK #1234" — shown in the totals box and the Payment Using box
+  const paymentLabel = paymentMethod
+    ? `${esc(paymentMethod)}${checkNumber ? " #" + esc(checkNumber) : ""}`
+    : "";
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -163,53 +171,81 @@ export function printInvoiceReceipt({
 <title>Invoice ${invoiceNum ? "#" + invoiceNum : ""}</title>
 <style>
   * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:Arial, Helvetica, sans-serif; color:#111; }
-  .page { width:8.5in; min-height:11in; margin:0 auto; padding:0.35in 0.4in; font-size:10px; }
+  body { font-family:Arial, Helvetica, sans-serif; color:#111; padding:0.3in; background:#f0ede4; }
+  .page { background:#fff; width:8.5in; min-height:11in; margin:0 auto; padding:0.4in 0.5in; box-shadow:0 10px 30px rgba(0,0,0,.15); font-size:11px; display:flex; flex-direction:column; }
 
-  .head-center { text-align:center; border-bottom:2px solid #111; padding-bottom:8px; margin-bottom:6px; }
-  .head-center h1 { font-size:17px; letter-spacing:.02em; }
-  .head-center .license { font-size:9.5px; color:#666; letter-spacing:.04em; margin-top:3px; }
+  .head-center { text-align:center; border-bottom:2px solid #111; padding-bottom:10px; margin-bottom:9px; }
+  .head-center h1 { font-size:23px; letter-spacing:.02em; }
+  .head-center .license { font-size:10.5px; color:#666; letter-spacing:.04em; margin-top:4px; }
   .head-center .license b { color:#333; }
-  .head-center .addr { font-size:10px; color:#333; margin-top:3px; }
+  .head-center .addr { font-size:11.5px; color:#333; margin-top:4px; }
 
-  .invmeta-line { display:flex; justify-content:flex-end; gap:16px; font-size:9.5px; color:#333; margin-bottom:8px; }
+  .invmeta-line { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; font-size:11px; color:#333; margin-bottom:9px; }
   .invmeta-line b { font-family:'Courier New', monospace; }
 
-  .infobox { display:grid; grid-template-columns:1fr 1fr; border:1px solid #999; margin-bottom:8px; }
-  .infobox .cell { padding:4px 8px; }
-  .infobox .cell + .cell { border-left:1px solid #999; }
-  .infobox .row { display:flex; justify-content:space-between; padding:1px 0; gap:10px; }
+  /* compact customer + vehicle box */
+  .infobox { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); border:1px solid #000; margin-bottom:6px; }
+  .infobox .cell { padding:3px 8px; }
+  .infobox .cell + .cell { border-left:1px solid #000; }
+  .infobox .row { display:flex; justify-content:space-between; padding:0.5px 0; gap:8px; }
   .infobox .lbl { color:#666; font-size:8.5px; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
-  .infobox .val { font-weight:600; text-align:right; }
+  .infobox .val { font-weight:600; text-align:right; font-size:10.5px; min-width:0; overflow-wrap:anywhere; }
 
-  .columns { display:grid; grid-template-columns:1.1fr 1fr; gap:12px; align-items:start; }
-  h3.section { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; background:#dcdcdc; border:1px solid #999; border-bottom:none; padding:3px 8px; }
+  .columns { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:14px; align-items:start; }
+  h3.section { font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; background:#dcdcdc; border:1px solid #000; border-bottom:none; padding:5px 9px; }
 
-  table.grid { width:100%; border-collapse:collapse; }
-  table.grid th { background:#eee; border:1px solid #999; font-size:8px; text-transform:uppercase; letter-spacing:.03em; color:#444; padding:2px 5px; text-align:left; }
+  table.grid { width:100%; border-collapse:collapse; table-layout:fixed; }
+  table.grid th { background:#eee; border:1px solid #000; font-size:9px; text-transform:uppercase; letter-spacing:.03em; color:#444; padding:4px 7px; text-align:left; }
   table.grid th.r, table.grid td.r { text-align:right; white-space:nowrap; }
-  table.grid td { border:1px solid #bbb; padding:2px 5px; height:17px; font-size:10px; }
+  /* every body row (items, notes, blanks) is exactly the same height */
+  table.grid tbody tr { height:22px; }
+  table.grid td { border:1px solid #000; padding:0 7px; height:22px; font-size:11.5px; line-height:20px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
   table.grid tr.blank td { color:transparent; }
-  table.grid tr.note td { border-top:none; background:#fafaf7; font-size:8.5px; font-style:italic; color:#666; padding:3px 5px 3px 16px; line-height:1.3; }
-  table.grid tr.note.last td { padding-bottom:5px; }
-  table.grid tfoot td { border:1px solid #999; background:#f3f3f0; font-weight:700; padding:3px 5px; }
+  table.grid tr.note td { background:#fafaf7; font-size:10px; font-style:italic; color:#666; padding-left:18px; }
+  table.grid tfoot td { border:1px solid #000; background:#f3f3f0; font-weight:700; font-size:11.5px; padding:0 7px; height:24px; line-height:22px; }
 
-  .remarks-box { border:1px solid #999; padding:6px 10px; font-size:9.5px; color:#333; line-height:1.5; margin-top:10px; }
-  .remarks-box b { font-size:8.5px; text-transform:uppercase; letter-spacing:.04em; color:#555; display:block; margin-bottom:3px; }
+  .remarks-box { border:1px solid #000; margin-top:9px; padding:5px 9px; font-size:10px; color:#333; line-height:1.4; }
+  .remarks-box b { display:block; font-size:9px; text-transform:uppercase; letter-spacing:.04em; color:#444; margin-bottom:2px; }
 
-  .bottom { display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px; gap:20px; }
-  .warranty { font-size:8px; color:#555; line-height:1.45; flex:1.3; }
-  .warranty b { color:#333; }
-  .sign { font-size:9px; color:#333; border-top:1px solid #333; padding-top:3px; margin-top:22px; }
-  .totalsbox { border:1px solid #999; width:220px; flex-shrink:0; }
-  .totalsbox .row { display:flex; justify-content:space-between; padding:3px 8px; border-bottom:1px solid #ccc; font-size:10px; }
+  /* bottom section: left (wide) = approval / notices / authorization, right (narrow) = totals / signature / payment */
+  .bottom { display:grid; grid-template-columns:minmax(0,1.75fr) minmax(0,0.75fr); gap:14px; margin-top:12px; align-items:stretch; break-inside:avoid; }
+  .left { display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .toprow { flex:1; display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:8px; }
+  .box { border:1px solid #000; }
+  .toprow > .box:first-child { display:flex; flex-direction:column; }
+  .appr-head { display:grid; grid-template-columns:.8fr .8fr 1fr 1.3fr; background:#dcdcdc; border-bottom:1px solid #000; font-size:8.5px; font-weight:700; text-transform:uppercase; padding:4px 6px; }
+  .appr-body { flex:1; min-height:38px; }
+  .ack { border-top:1px solid #333; margin:0 8px 6px; padding-top:3px; font-size:9px; text-align:center; color:#333; }
+  .notice { padding:6px 8px; font-size:10px; color:#333; line-height:1.4; display:flex; flex-direction:column; justify-content:space-between; gap:6px; }
+  .notice .sep { border-top:1px solid #000; margin:0 -8px; }
+  .notice b { font-size:10.5px; }
+  /* flex:1 stretches this box so its bottom lines up with the bottom of "Payment Using" */
+  .auth { flex:none; display:flex; flex-direction:column; justify-content:flex-start; padding:6px 9px; font-size:10px; line-height:1.45; color:#333; }
+  .auth .initrow { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px; font-weight:700; }
+  .auth .init { flex:0 0 110px; height:32px; border:1px solid #000; background:#fff; }
+
+  .right { display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .totalsbox { border:1px solid #000; width:100%; }
+  .totalsbox .row { display:flex; justify-content:space-between; padding:4px 9px; border-bottom:1px solid #000; font-size:11.5px; }
   .totalsbox .row.paid { color:#166534; font-weight:700; }
-  .totalsbox .row.due { font-weight:700; font-size:13px; border-bottom:none; background:#f3f3f0; padding:5px 8px; }
+  .totalsbox .row.tot { font-weight:700; font-size:15px; border-bottom:none; background:#f3f3f0; padding:7px 9px; }
+
+  .accept { margin-top:auto; padding-top:16px; }
+  .accept .line { border-bottom:1px dotted #333; height:30px; display:flex; align-items:flex-end; }
+  .accept .x { font-size:14px; font-weight:800; line-height:1; }
+  .accept .cap { font-size:8px; letter-spacing:.16em; text-transform:uppercase; margin-top:2px; color:#333; }
+  .accept .cap2 { font-size:8px; color:#333; }
+
+  .pay { font-size:13px; border:1px solid #000; padding:6px 9px; display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; min-width:0; }
+  .pay b { font-size:14px; text-transform:uppercase; letter-spacing:.02em; overflow-wrap:anywhere; }
+  .pay .blankline { flex:1; border-bottom:1px solid #333; height:16px; }
 
   @media print {
-    body { margin:0; }
-    .page { padding:0; }
-    @page { size:letter; margin:0.35in 0.4in; }
+    body { margin:0; padding:0; background:#fff; }
+    .page { padding:0; box-shadow:none; min-height:0; width:100%; max-width:100%; }
+    @page { size:letter; margin:0.3in 0.4in; }
+    .head-center { padding-bottom:8px; margin-bottom:7px; }
+    .bottom { margin-top:10px; }
   }
 </style>
 </head>
@@ -222,9 +258,9 @@ export function printInvoiceReceipt({
     </div>
 
     <div class="invmeta-line">
-      <span>Invoice <b>${invoiceNum ? "#" + esc(invoiceNum) : "NEW"}</b></span>
-      <span>Date <b>${esc(invoiceDate)}</b></span>
-      <span>Status <b>${esc(status || "Open")}</b></span>
+      <span style="text-align:left">Invoice <b>${invoiceNum ? "#" + esc(invoiceNum) : "NEW"}</b></span>
+      <span style="text-align:center">Date <b>${esc(invoiceDate)}</b></span>
+      <span style="text-align:right">Status <b>${esc(status || "Open")}</b></span>
     </div>
 
     <div class="infobox">
@@ -244,7 +280,7 @@ export function printInvoiceReceipt({
       <div>
         <h3 class="section">Labor</h3>
         <table class="grid">
-          <thead><tr><th>Description</th><th class="r" style="width:38px">Hrs</th><th class="r" style="width:52px">Rate</th><th class="r" style="width:62px">Total</th></tr></thead>
+          <thead><tr><th>Description</th><th class="r" style="width:38px">Hrs</th><th class="r" style="width:56px">Rate</th><th class="r" style="width:62px">Total</th></tr></thead>
           <tbody>${laborHtml}</tbody>
           <tfoot><tr><td colspan="3">Total Labor</td><td class="r">${money(totals.labor)}</td></tr></tfoot>
         </table>
@@ -252,7 +288,7 @@ export function printInvoiceReceipt({
       <div>
         <h3 class="section">Parts &amp; Lubricants</h3>
         <table class="grid">
-          <thead><tr><th>Description</th><th class="r" style="width:30px">Qty</th><th class="r" style="width:50px">Price</th><th class="r" style="width:58px">Total</th></tr></thead>
+          <thead><tr><th>Description</th><th class="r" style="width:34px">Qty</th><th class="r" style="width:54px">Price</th><th class="r" style="width:58px">Total</th></tr></thead>
           <tbody>${partsHtml}</tbody>
           <tfoot><tr><td colspan="3">Total Parts</td><td class="r">${money(totals.parts)}</td></tr></tfoot>
         </table>
@@ -266,25 +302,47 @@ export function printInvoiceReceipt({
     }
 
     <div class="bottom">
-      <div class="warranty">
-        <b>Limited Warranty:</b> All parts are new unless shown as used (U) or rebuilt (R). Parts are warranted by the manufacturer or supplier; labor is warranted for 30 days unless otherwise indicated in writing.
-        <div class="sign">Customer Signature &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date</div>
+      <div class="left">
+        <div class="toprow">
+          <div class="box">
+            <div class="appr-head"><span>Date</span><span>Time</span><span>Phone</span><span>Approved Amount</span></div>
+            <div class="appr-body"></div>
+            <div class="ack">I acknowledge notice and oral approval of an increase in the original estimated price</div>
+          </div>
+          <div class="box notice">
+            <div><b>All Parts Are New</b> Unless Shown As (U) Used or (R) Rebuilt</div>
+            <div class="sep"></div>
+            <div>This vehicle will be reassembled within 3 days of the date shown above if I do not authorize the recommended services.</div>
+          </div>
+        </div>
+
+        <div class="box auth">
+          I authorize the above repairs and necessary materials. Your employees may operate vehicle for inspection, testing, delivery at my risk. You will not be responsible for loss or damage to vehicle or items left in it. I agree to pay reasonable storage on vehicle left more than 3 working days after notification that job is completed. Labor is guaranteed 90 days or 4000 miles whichever occurs first. All other guarantees are made by the manufacturer. Warrantee work based on this bill must be performed at this shop. All parts are new unless specified as (U) used or (R) rebuilt.
+          <div class="initrow"><span>REMOVED PARTS WILL BE DISPOSED OF UNLESS I INITIAL HERE &rarr;</span><span class="init"></span></div>
+        </div>
       </div>
-      <div class="totalsbox">
-        <div class="row"><span>Labor</span><span>${money(totals.labor)}</span></div>
-        <div class="row"><span>Parts</span><span>${money(totals.parts)}</span></div>
-        <div class="row"><span>Sales Tax</span><span>${money(totals.tax)}</span></div>
-        ${
-          paymentSurcharge > 0
-            ? `<div class="row"><span>Card Surcharge</span><span>${money(paymentSurcharge)}</span></div>`
-            : ""
-        }
-        ${
-          paymentMethod
-            ? `<div class="row paid"><span>Paid via ${esc(paymentMethod)}${checkNumber ? " #" + esc(checkNumber) : ""}</span><span></span></div>`
-            : ""
-        }
-        <div class="row due"><span>Total</span><span>${money(finalTotal)}</span></div>
+
+      <div class="right">
+        <div class="totalsbox">
+          <div class="row"><span>Labor</span><span>${money(totals.labor)}</span></div>
+          <div class="row"><span>Parts</span><span>${money(totals.parts)}</span></div>
+          <div class="row"><span>Sales Tax</span><span>${money(totals.tax)}</span></div>
+          ${
+            paymentSurcharge > 0
+              ? `<div class="row"><span>Card Surcharge</span><span>${money(paymentSurcharge)}</span></div>`
+              : ""
+          }
+          ${paymentMethod ? `<div class="row paid"><span>Paid via ${paymentLabel}</span><span></span></div>` : ""}
+          <div class="row tot"><span>Total</span><span>${money(finalTotal)}</span></div>
+        </div>
+
+        <div class="accept">
+          <div class="line"><span class="x">X</span></div>
+          <div class="cap">Acceptance Signature</div>
+          <div class="cap2">I accept the charges and terms of this agreement.</div>
+        </div>
+
+        <div class="pay">Payment Using: ${paymentMethod ? `<b>${paymentLabel}</b>` : `<span class="blankline"></span>`}</div>
       </div>
     </div>
   </div>
