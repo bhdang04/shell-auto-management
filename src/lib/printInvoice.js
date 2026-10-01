@@ -7,27 +7,45 @@ export const SHOP = {
 };
 
 // ---------------------------------------------------------------------------
-// PAGINATION ROW CAPACITIES (total rows per column = item + note + blank rows).
-// Every body row is a fixed 22px, so these numbers alone control how tall each
-// page's Labor/Parts tables are. Tune them if a page runs long or short on
-// your actual printer.
+// PAGINATION BUDGETS (in px of Labor/Parts body height per page).
 //
-//   SINGLE_PAGE_ROWS  – ticket fits on ONE page (full header + bottom section).
-//                       This is your old TARGET_ROWS value.
-//   FIRST_PAGE_ROWS   – page 1 of a multi-page ticket (full header, but NO
-//                       bottom section, so there is room for more rows).
-//   CONT_PAGE_ROWS    – pages 2+ that are NOT the last page (compact header,
-//                       no bottom section).
-//   LAST_CONT_ROWS    – the LAST page when it isn't page 1 (compact header +
-//                       bottom section with totals/signature).
+// Descriptions and comments WRAP onto as many lines as they need. To decide
+// when a ticket must continue on the next page, every entry's height is
+// estimated from its CHARACTER COUNT (how many lines it will wrap to). Each
+// page has a budget: if the page's used height + the next entry's height
+// would go over the budget, the whole entry (a labor/part line together with
+// its comments) moves to the next page.
+//
+//   SINGLE_PAGE_PX  – ticket fits on ONE page (full header + bottom section)
+//   FIRST_PAGE_PX   – page 1 of a multi-page ticket (no bottom section)
+//   CONT_PAGE_PX    – pages 2+ that are not the last page (compact header)
+//   LAST_CONT_PX    – the LAST page when it isn't page 1 (has bottom section)
+//
+// If a page spills onto an extra sheet, LOWER that number. If a page leaves
+// too much white space at the bottom, RAISE it.
 // ---------------------------------------------------------------------------
-const SINGLE_PAGE_ROWS = 19;
-const FIRST_PAGE_ROWS = 31;
-const CONT_PAGE_ROWS = 36;
-const LAST_CONT_ROWS = 24;
+const SINGLE_PAGE_PX = 370;
+const FIRST_PAGE_PX = 660;
+const CONT_PAGE_PX = 800;
+const LAST_CONT_PX = 530;
 
-const nonLastCap = (i) => (i === 0 ? FIRST_PAGE_ROWS : CONT_PAGE_ROWS);
-const lastCap = (i) => (i === 0 ? SINGLE_PAGE_ROWS : LAST_CONT_ROWS);
+const nonLastCap = (i) => (i === 0 ? FIRST_PAGE_PX : CONT_PAGE_PX);
+const lastCap = (i) => (i === 0 ? SINGLE_PAGE_PX : LAST_CONT_PX);
+
+// Characters that fit on ONE printed line, per column. Deliberately a bit
+// conservative so the estimate errs toward pushing to the next page rather
+// than overflowing. Lower a value if long text is wrapping more than the
+// estimate expects.
+const LABOR_DESC_CPL = 36;
+const LABOR_NOTE_CPL = 34;
+const PART_DESC_CPL = 25;
+const PART_NOTE_CPL = 24;
+
+// Row heights used by the estimate (must match the CSS below).
+const ITEM_PAD = 13; // 4px + 4px padding, +5px group spacing above (counted for every item, to stay conservative)
+const ITEM_LINE = 14; // line-height of an item line
+const NOTE_PAD = 8; // 4px + 4px padding
+const NOTE_LINE = 14; // line-height of a note line (same as an item line)
 
 export function money(n) {
   return "$" + Number(n || 0).toFixed(2);
@@ -37,29 +55,54 @@ export function esc(s) {
   return String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 }
 
+/** How many lines `text` wraps to at `cpl` characters per line (word-wrap). */
+function wrapCount(text, cpl) {
+  const words = String(text ?? "").split(/\s+/).filter(Boolean);
+  if (!words.length) return 1;
+  let lines = 1;
+  let len = 0;
+  for (const w of words) {
+    const need = len === 0 ? w.length : len + 1 + w.length;
+    if (need <= cpl) {
+      len = need;
+    } else {
+      if (len > 0) lines += 1;
+      // a single word longer than a whole line breaks across lines
+      lines += Math.max(0, Math.ceil(w.length / cpl) - 1);
+      len = w.length % cpl || Math.min(w.length, cpl);
+    }
+  }
+  return lines;
+}
+
+const itemHeight = (text, cpl) => ITEM_PAD + ITEM_LINE * wrapCount(text, cpl);
+const noteHeight = (text, cpl) => NOTE_PAD + NOTE_LINE * wrapCount(text, cpl);
+
 function laborRow(it) {
   const hrs = it.qty === "" || it.qty === undefined ? "—" : it.qty;
-  const rate = it.price === "" || it.price === undefined ? "—" : money(it.price);
   const total = it.qty === "" || it.price === "" ? "—" : money(it.total);
-  return `<tr><td>${esc(it.desc)}</td><td class="r">${esc(hrs)}</td><td class="r">${rate}</td><td class="r">${total}</td></tr>`;
+  return `<div class="g L i"><div>${esc(it.desc)}</div><div>${esc(hrs)}</div><div>${total}</div></div>`;
+}
+
+function partCond(it) {
+  return it.condition ? `(${it.condition}) ` : "";
 }
 
 function partRow(it) {
   const qty = it.qty === "" || it.qty === undefined ? "—" : it.qty;
   const price = it.price === "" || it.price === undefined ? "—" : money(it.price);
   const total = it.qty === "" || it.price === "" ? "—" : money(it.total);
-  // (U) used / (R) rebuilt goes FIRST so the ellipsis never clips it.
-  // New parts have no condition and print with no tag.
+  // (U) used / (R) rebuilt goes FIRST. New parts have no condition and print with no tag.
   const cond = it.condition ? `<b>(${esc(it.condition)})</b> ` : "";
-  return `<tr><td>${cond}${esc(it.desc)}</td><td class="r">${esc(qty)}</td><td class="r">${price}</td><td class="r">${total}</td></tr>`;
+  return `<div class="g P i"><div>${cond}${esc(it.desc)}</div><div>${esc(qty)}</div><div>${price}</div><div>${total}</div></div>`;
 }
 
-function noteRow(text, isLast) {
-  return `<tr class="note${isLast ? " last" : ""}"><td colspan="4">${esc(text)}</td></tr>`;
-}
-
-function blankRow() {
-  return `<tr class="blank"><td>&nbsp;</td><td></td><td></td><td></td></tr>`;
+// Comment rows keep the same column grid as item rows: the text sits in the
+// Description cell only (so it wraps within that width) and the remaining
+// cells are empty, which lets the vertical column lines run straight through.
+function noteRow(text, cls) {
+  const empties = cls === "L" ? 2 : 3;
+  return `<div class="g ${cls} nr"><div class="n">${esc(text)}</div>${"<div></div>".repeat(empties)}</div>`;
 }
 
 /**
@@ -103,54 +146,88 @@ function groupItemsWithNotes(items) {
   return { laborGroups, partGroups, orphanNotes };
 }
 
-/**
- * Splits one column into pages (arrays of row HTML, NOT yet padded).
- * A group (item row + its note rows) is kept together: if it doesn't fit in
- * the space left on the current page it moves whole to the next page. Only a
- * group taller than a full continuation page is allowed to split.
- */
-function paginateColumn(groups, rowFn) {
-  const pages = [[]];
+// Row builders: turn one group into [{ html, h }] where h is the estimated
+// height in px of that row once its text has wrapped.
+function laborGroupRows(g) {
+  return [
+    { html: laborRow(g.item), h: itemHeight(g.item.desc, LABOR_DESC_CPL) },
+    ...g.notes.map((n) => ({ html: noteRow(n, "L"), h: noteHeight(n, LABOR_NOTE_CPL) })),
+  ];
+}
 
-  for (const g of groups) {
-    const rows = [rowFn(g.item), ...g.notes.map((n, i) => noteRow(n, i === g.notes.length - 1))];
+function partGroupRows(g) {
+  return [
+    { html: partRow(g.item), h: itemHeight(partCond(g.item) + g.item.desc, PART_DESC_CPL) },
+    ...g.notes.map((n) => ({ html: noteRow(n, "P"), h: noteHeight(n, PART_NOTE_CPL) })),
+  ];
+}
+
+/**
+ * Splits one column into pages: [{ items: [{ html, h, g }], px }]. A group
+ * (item + its comments, tagged with the same `g`) is kept together — if its
+ * estimated height doesn't fit in what's left of the page, the WHOLE group
+ * moves to the next page. Only a group taller than a full continuation page
+ * is allowed to split row by row.
+ */
+function paginateColumn(groups, buildRows) {
+  const pages = [{ items: [], px: 0 }];
+
+  groups.forEach((g, gi) => {
+    const rows = buildRows(g);
+    const total = rows.reduce((s, r) => s + r.h, 0);
     const idx = pages.length - 1;
     const cur = pages[idx];
 
-    if (cur.length > 0 && cur.length + rows.length > nonLastCap(idx) && rows.length <= CONT_PAGE_ROWS) {
-      pages.push([]);
+    if (cur.px > 0 && cur.px + total > nonLastCap(idx) && total <= CONT_PAGE_PX) {
+      pages.push({ items: [], px: 0 });
     }
 
     for (const r of rows) {
-      const i = pages.length - 1;
-      if (pages[i].length >= nonLastCap(i)) pages.push([]);
-      pages[pages.length - 1].push(r);
+      let page = pages[pages.length - 1];
+      if (page.px > 0 && page.px + r.h > nonLastCap(pages.length - 1)) {
+        pages.push({ items: [], px: 0 });
+        page = pages[pages.length - 1];
+      }
+      page.items.push({ html: r.html, h: r.h, g: gi });
+      page.px += r.h;
     }
-  }
+  });
 
   return pages;
 }
 
 /** Both columns share page boundaries: page count = whichever needs more.
- *  The LAST page must also have room for the bottom section, which allows
- *  fewer rows — if the final page is too full, one more page is added so the
- *  totals/signature block never gets squeezed off the end. */
+ *  The LAST page must also leave room for the bottom section (totals,
+ *  signature…), which allows less height. If the final page is too full,
+ *  the LAST group (item + its comments) is moved onto one extra page so that
+ *  page carries real content plus the totals block, instead of a blank
+ *  page holding only the totals. */
 function planPages(laborGroups, partGroups) {
-  const lp = paginateColumn(laborGroups, laborRow);
-  const pp = paginateColumn(partGroups, partRow);
+  const lp = paginateColumn(laborGroups, laborGroupRows);
+  const pp = paginateColumn(partGroups, partGroupRows);
   let count = Math.max(lp.length, pp.length);
 
   const lastIdx = count - 1;
-  const used = Math.max((lp[lastIdx] || []).length, (pp[lastIdx] || []).length);
-  if (used > lastCap(lastIdx)) count += 1;
+  const px = (pages, i) => pages[i]?.px || 0;
+
+  if (Math.max(px(lp, lastIdx), px(pp, lastIdx)) > lastCap(lastIdx)) {
+    for (const pages of [lp, pp]) {
+      if (px(pages, lastIdx) <= lastCap(lastIdx)) continue;
+      const page = pages[lastIdx];
+      const lastG = page.items[page.items.length - 1].g;
+      const first = page.items.findIndex((it) => it.g === lastG);
+      if (first > 0) {
+        const moved = page.items.splice(first);
+        const movedPx = moved.reduce((s, it) => s + it.h, 0);
+        page.px -= movedPx;
+        while (pages.length < count) pages.push({ items: [], px: 0 });
+        pages[count] = { items: moved, px: movedPx };
+      }
+    }
+    count += 1;
+  }
 
   return { lp, pp, count };
-}
-
-function padRows(rows, cap) {
-  const out = rows.slice();
-  while (out.length < cap) out.push(blankRow());
-  return out.join("");
 }
 
 /** Opens a blank print window synchronously — call this FIRST, before any
@@ -171,9 +248,11 @@ export function openInvoiceWindow() {
  * Opens a print-ready invoice. Page 1 has the full shop header, meta line and
  * customer/vehicle box; if Labor or Parts overflow, extra pages are added with
  * a compact header (shop, invoice #, date, customer, vehicle, page X of Y).
- * Labor and Parts paginate together, comment rows stay with their item, and
- * the totals / approval / signature / payment section appears on the LAST
- * page only (earlier pages show "Continued on next page").
+ * Labor and Parts descriptions/comments wrap onto as many lines as needed;
+ * the two columns are stretched to the same height so Total Labor and
+ * Total Parts always line up. Comment rows stay with their item, and the
+ * totals / approval / signature / payment section appears on the LAST page
+ * only (earlier pages show "Continued on next page").
  *
  * Pass status: "Estimate" to print an estimate — the header reads
  * "Estimate #..." instead of "Invoice #..." and the "Payment Using" box
@@ -306,43 +385,40 @@ export function printInvoiceReceipt({
     </div>`;
 
   // ---- build each page --------------------------------------------------------
-  const contFoot = `<tfoot><tr><td colspan="4" class="cont">Continued on next page &rarr;</td></tr></tfoot>`;
+  const contFoot = (cls) =>
+    `<div class="g ${cls} k"><div class="cont" style="grid-column:1/-1">Continued on next page &rarr;</div></div>`;
 
   let pagesHtml = "";
   for (let i = 0; i < count; i++) {
     const isLast = i === count - 1;
     const cap = isLast ? lastCap(i) : nonLastCap(i);
 
-    const laborRows = padRows(lp[i] || [], cap);
-    const partsRows = padRows(pp[i] || [], cap);
+    const laborBody = (lp[i]?.items || []).map((r) => r.html).join("");
+    const partsBody = (pp[i]?.items || []).map((r) => r.html).join("");
 
     const laborFoot = isLast
-      ? `<tfoot><tr><td colspan="3">Total Labor</td><td class="r">${money(totals.labor)}</td></tr></tfoot>`
-      : contFoot;
+      ? `<div class="g L k"><div style="grid-column:1/3">Total Labor</div><div>${money(totals.labor)}</div></div>`
+      : contFoot("L");
     const partsFoot = isLast
-      ? `<tfoot><tr><td colspan="3">Total Parts</td><td class="r">${money(totals.parts)}</td></tr></tfoot>`
-      : contFoot;
+      ? `<div class="g P k"><div style="grid-column:1/4">Total Parts</div><div>${money(totals.parts)}</div></div>`
+      : contFoot("P");
 
     pagesHtml += `
   <div class="page">
     ${i === 0 ? fullHeader : compactHeader(i + 1)}
 
     <div class="columns">
-      <div>
-        <h3 class="section">Labor</h3>
-        <table class="grid">
-          <thead><tr><th>Description</th><th class="r" style="width:36px">Hrs</th><th class="r" style="width:64px">Rate</th><th class="r" style="width:68px">Total</th></tr></thead>
-          <tbody>${laborRows}</tbody>
-          ${laborFoot}
-        </table>
+      <div class="c">
+        <div class="t">Labor</div>
+        <div class="g L h"><div>Description</div><div>Hrs</div><div>Total</div></div>
+        <div class="cb" style="min-height:${cap}px">${laborBody}<div class="g L f"><div></div><div></div><div></div></div></div>
+        ${laborFoot}
       </div>
-      <div>
-        <h3 class="section">Parts &amp; Lubricants</h3>
-        <table class="grid">
-          <thead><tr><th>Description</th><th class="r" style="width:32px">Qty</th><th class="r" style="width:64px">Price</th><th class="r" style="width:68px">Total</th></tr></thead>
-          <tbody>${partsRows}</tbody>
-          ${partsFoot}
-        </table>
+      <div class="c">
+        <div class="t">Parts &amp; Lubricants</div>
+        <div class="g P h"><div>Description</div><div>Qty</div><div>Price</div><div>Total</div></div>
+        <div class="cb" style="min-height:${cap}px">${partsBody}<div class="g P f"><div></div><div></div><div></div><div></div></div></div>
+        ${partsFoot}
       </div>
     </div>
 
@@ -384,19 +460,27 @@ export function printInvoiceReceipt({
   .infobox .lbl { color:#666; font-size:8.5px; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
   .infobox .val { font-weight:600; text-align:right; font-size:10.5px; min-width:0; overflow-wrap:anywhere; }
 
-  .columns { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:14px; align-items:start; }
-  h3.section { font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; background:#dcdcdc; border:1px solid #000; border-bottom:none; padding:5px 9px; }
+  /* Labor / Parts: both columns stretch to the same height so the totals line up */
+  .columns { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:14px; align-items:stretch; }
+  .c { display:flex; flex-direction:column; border:1px solid #000; }
+  .c .t { background:#dcdcdc; border-bottom:1px solid #000; padding:5px 9px; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+  .cb { display:flex; flex-direction:column; flex:1; }
+  .cb > .g { flex:none; }
+  .cb > .g.f { flex:1 1 auto; }
 
-  table.grid { width:100%; border-collapse:collapse; table-layout:fixed; }
-  table.grid th { background:#eee; border:1px solid #000; font-size:9px; text-transform:uppercase; letter-spacing:.03em; color:#444; padding:4px 7px; text-align:left; }
-  table.grid th.r, table.grid td.r { text-align:right; white-space:nowrap; padding-left:4px; padding-right:5px; text-overflow:clip; }
-  /* every body row (items, notes, blanks) is exactly the same height */
-  table.grid tbody tr { height:22px; }
-  table.grid td { border:1px solid #000; padding:0 7px; height:22px; font-size:11.5px; line-height:20px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-  table.grid tr.blank td { color:transparent; }
-  table.grid tr.note td { background:#fafaf7; font-size:10px; font-style:italic; color:#666; padding-left:18px; }
-  table.grid tfoot td { border:1px solid #000; background:#f3f3f0; font-weight:700; font-size:11.5px; padding:0 7px; height:24px; line-height:22px; }
-  table.grid tfoot td.cont { text-align:right; font-weight:600; font-style:italic; font-size:10.5px; color:#555; }
+  .g { display:grid; }
+  .g.L { grid-template-columns:minmax(0,1fr) 44px 72px; }
+  .g.P { grid-template-columns:minmax(0,1fr) 32px 64px 68px; }
+  .g > div { padding:4px 6px; font-size:11.5px; line-height:14px; min-width:0; overflow-wrap:anywhere; }
+  .g > div + div { border-left:1px solid #000; text-align:right; white-space:nowrap; padding-left:4px; padding-right:5px; }
+  /* no horizontal row lines; each new item gets a little extra space above it so groups stay readable */
+  .cb > .g.i:not(:first-child) > div { padding-top:9px; }
+  /* comments: same size/line-height/padding as regular line items, white background, slightly indented italic */
+  .g.nr > .n { padding-left:18px; padding-right:7px; font-style:italic; color:#555; text-align:left; }
+  .g.h > div { background:#eee; border-bottom:1px solid #000; font-size:9px; line-height:14px; text-transform:uppercase; letter-spacing:.03em; color:#444; }
+  .g.k > div { background:#f3f3f0; border-top:1px solid #000; font-weight:700; font-size:11.5px; padding:5px 6px; }
+  .g.k > div + div { padding-left:4px; padding-right:5px; }
+  .g.k > .cont { text-align:right; font-weight:600; font-style:italic; font-size:10.5px; color:#555; white-space:normal; border-left:none; }
 
   .pagefoot { margin-top:auto; padding-top:6px; text-align:right; font-size:9px; color:#666; letter-spacing:.04em; }
 
