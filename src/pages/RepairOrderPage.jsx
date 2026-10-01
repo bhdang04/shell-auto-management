@@ -73,6 +73,7 @@ function flattenHistory(vehicle) {
     paymentMethod: inv.payment_method || null,
     paymentSurcharge: Number(inv.payment_surcharge || 0),
     checkNumber: inv.check_number || null,
+    serviceSummary: inv.service_summary || "",
     items: (inv.line_items || [])
       .slice()
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
@@ -126,6 +127,7 @@ export default function RepairOrderPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shopSettings, setShopSettings] = useState(null);
   const [checkNumber, setCheckNumber] = useState(null);
+  const [serviceSummary, setServiceSummary] = useState(""); // per-visit; lives on the invoice, not the vehicle
 
   useEffect(() => {
     getShopSettings()
@@ -174,6 +176,7 @@ export default function RepairOrderPage() {
     setInvoiceDate(todayStr());
     setStatus(null);
     setItems([]);
+    setServiceSummary("");
     setSaveStatus(null);
     setDirty(false);
     setPaymentMethod(null);
@@ -190,6 +193,7 @@ export default function RepairOrderPage() {
     setInvoiceNum(h.num);
     setInvoiceDate(h.date);
     setStatus(h.status);
+    setServiceSummary(h.service_summary || "");
     setItems(h.items.map((it) => ({ ...it, _tax: h.tax })));
     setPaymentMethod(h.paymentMethod || null);
     setPaymentSurcharge(h.paymentSurcharge || 0);
@@ -644,6 +648,7 @@ export default function RepairOrderPage() {
       paymentMethod: null,      // an estimate should never show "Paid via..."
       paymentSurcharge: 0,
       checkNumber: null,
+      serviceSummary,
       shop: shopSettings,
     });
   }
@@ -703,6 +708,7 @@ export default function RepairOrderPage() {
           paymentMethod: method,
           paymentSurcharge: surchargeAmount,
           checkNumber: enteredCheckNumber || null,
+          serviceSummary,
           shop: shopSettings,
         });
       }
@@ -875,6 +881,8 @@ export default function RepairOrderPage() {
             <CustomerForm
               customer={customer}
               onFieldChange={handleCustomerFieldChange}
+              serviceSummary={serviceSummary}
+              onServiceSummaryChange={setServiceSummary}
               onSelectCustomer={selectCustomer}
               onCreateNew={createNewCustomer}
               onShowCustomers={() => setCustomersOpen(true)}
@@ -926,6 +934,7 @@ export default function RepairOrderPage() {
                   paymentMethod,
                   paymentSurcharge,
                   checkNumber,
+                  serviceSummary,
                   shop: shopSettings,
                 })
               }

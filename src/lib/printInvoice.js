@@ -267,6 +267,7 @@ export function printInvoiceReceipt({
   invoiceNum,
   invoiceDate,
   status,
+  serviceSummary,
   customer,
   vehicle,
   items,
@@ -292,6 +293,7 @@ export function printInvoiceReceipt({
     : "";
 
   const vehicleStr = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ");
+  const summary = String(serviceSummary || "").trim();
 
   // ---- header variants -----------------------------------------------------
   const fullHeader = `
@@ -302,9 +304,12 @@ export function printInvoiceReceipt({
     </div>
 
     <div class="invmeta-line">
-      <span style="text-align:left">${docLabel} <b>${invoiceNum ? "#" + esc(invoiceNum) : "NEW"}</b></span>
-      <span style="text-align:center">Date <b>${esc(invoiceDate)}</b></span>
-      <span style="text-align:right">Status <b>${esc(status || "Open")}</b></span>
+      <span>${docLabel} <b>${invoiceNum ? "#" + esc(invoiceNum) : "NEW"}</b></span>
+      <span>Date <b>${esc(invoiceDate)}</b></span>
+      <span class="meta-right">
+        ${summary ? `<span class="svc"><b>${esc(summary)}</b></span>` : ""}
+        <span class="stat">Status <b>${esc(status || "Open")}</b></span>
+      </span>
     </div>
 
     <div class="infobox">
@@ -449,9 +454,13 @@ export function printInvoiceReceipt({
   .head-compact .hc-shop { font-size:13px; font-weight:700; color:#111; white-space:nowrap; }
   .head-compact .hc-mid { flex:1; min-width:0; text-align:center; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 
-  .invmeta-line { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; font-size:11px; color:#333; margin-bottom:9px; }
+  .invmeta-line { display:grid; grid-template-columns:auto auto minmax(0,1fr); column-gap:26px; align-items:center; font-size:11px; color:#333; margin-bottom:9px; }
   .invmeta-line b { font-family:'Courier New', monospace; }
-
+  .invmeta-line .meta-right { display:flex; justify-content:flex-end; align-items:baseline; gap:16px; min-width:0; }
+  .invmeta-line .svc { flex:0 1 auto; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .invmeta-line .svc b { font-family:Arial, Helvetica, sans-serif; font-weight:700; }
+  .invmeta-line .stat { flex:none; white-space:nowrap; }
+  
   /* compact customer + vehicle box */
   .infobox { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); border:1px solid #000; margin-bottom:6px; }
   .infobox .cell { padding:3px 8px; }

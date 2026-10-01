@@ -69,12 +69,15 @@ export async function saveInvoice({
   paymentMethod,
   paymentSurcharge,
   checkNumber,
+  serviceSummary,
 }) {
   const invoiceFields = { status, labor_total: laborTotal, parts_total: partsTotal, tax };
   if (paymentMethod !== undefined) invoiceFields.payment_method = paymentMethod;
   if (paymentSurcharge !== undefined) invoiceFields.payment_surcharge = paymentSurcharge;
   if (checkNumber !== undefined) invoiceFields.check_number = checkNumber;
-  
+  // Only touched when the caller passes it, so other callers (payment, void, etc.) can't wipe it.
+  if (serviceSummary !== undefined) invoiceFields.service_summary = String(serviceSummary).trim() || null;
+
   let invoice;
   if (invoiceId) {
     const { data, error } = await supabase
@@ -106,7 +109,7 @@ export async function saveInvoice({
       code: it.kind === "comment" ? "" : it.code || "",
       description: it.desc || "",
       sub: it.sub || "",
-      condition: it.kind === "comment" || it.tag !== "PART" ? null : it.condition || null,  // NEW
+      condition: it.kind === "comment" || it.tag !== "PART" ? null : it.condition || null,
       qty: it.qty === "" || it.qty === undefined ? null : parseFloat(it.qty),
       price: it.price === "" || it.price === undefined ? null : parseFloat(it.price),
       sort_order: i,
