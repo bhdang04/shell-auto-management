@@ -881,8 +881,6 @@ export default function RepairOrderPage() {
             <CustomerForm
               customer={customer}
               onFieldChange={handleCustomerFieldChange}
-              serviceSummary={serviceSummary}
-              onServiceSummaryChange={setServiceSummary}
               onSelectCustomer={selectCustomer}
               onCreateNew={createNewCustomer}
               onShowCustomers={() => setCustomersOpen(true)}
@@ -894,6 +892,8 @@ export default function RepairOrderPage() {
               onSelectInvoice={(idx) => {
                 if (history && history[idx]) loadInvoiceFromHistory(idx);
               }}
+              serviceSummary={serviceSummary}
+              onServiceSummaryChange={setServiceSummary}
               vehicleCount={customerVehicles.length}
               onSwitchVehicle={handleSwitchVehicle}
               onAddVehicle={handleAddVehicle}
