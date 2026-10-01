@@ -194,6 +194,7 @@ body { font-family: 'Inter', sans-serif; background: #0b0c0e; }
 .ro-card-link:hover { text-decoration:underline; }
 .field-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
 .field-row.veh-ymm { grid-template-columns:70px 1fr 1fr; }
+.field-row.veh-spec { grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr); }
 .vin-status { font-size:9.5px; text-transform:none; letter-spacing:0; color:var(--muted); font-weight:400; }
 .vin-status.ok { color:var(--good); }
 .vin-status.err { color:var(--bad); }

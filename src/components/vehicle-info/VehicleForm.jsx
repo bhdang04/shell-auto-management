@@ -9,6 +9,8 @@ import { decodeVin, vinResultToSpecs } from "../../api/vehicleLookup";
  * Props:
  *  - vehicle: { year, make, model, engine_specs, plate, vin, odo }
  *  - onFieldChange(field, value): update a single vehicle field
+ *  - serviceSummary: short per-visit summary text (lives on the INVOICE, not the vehicle)
+ *  - onServiceSummaryChange(value): update the service summary
  *  - history: passed straight through to VehicleHistory
  *  - onSelectInvoice(index): passed straight through to VehicleHistory
  *  - vehicleCount: how many vehicles the current customer has on file
@@ -18,6 +20,8 @@ import { decodeVin, vinResultToSpecs } from "../../api/vehicleLookup";
 export default function VehicleForm({
   vehicle,
   onFieldChange,
+  serviceSummary = "",
+  onServiceSummaryChange,
   history,
   onSelectInvoice,
   vehicleCount = 0,
@@ -70,6 +74,7 @@ export default function VehicleForm({
         )}
       </div>
 
+      {/* Row 1: Year / Make / Model */}
       <div className="field-row veh-ymm">
         <div className="field">
           <label>Year</label>
@@ -90,22 +95,27 @@ export default function VehicleForm({
         />
       </div>
 
-      <div className="field-row">
+      {/* Row 2: Spec (widest) / Odo / License */}
+      <div className="field-row veh-spec">
         <div className="field">
-          <label>Engine / Drivetrain</label>
-          <input value={vehicle.engine_specs || ""} onChange={(e) => onFieldChange("engine_specs", e.target.value)} />
+          <label>Spec</label>
+          <input
+            value={vehicle.engine_specs || ""}
+            onChange={(e) => onFieldChange("engine_specs", e.target.value)}
+          />
         </div>
         <div className="field">
-          <label>Odometer</label>
-          <input value={vehicle.odo} onChange={(e) => onFieldChange("odo", e.target.value)} />
+          <label>Odo</label>
+          <input value={vehicle.odo || ""} onChange={(e) => onFieldChange("odo", e.target.value)} />
+        </div>
+        <div className="field">
+          <label>License</label>
+          <input value={vehicle.plate || ""} onChange={(e) => onFieldChange("plate", e.target.value)} />
         </div>
       </div>
 
+      {/* Row 3: VIN / Service Summary */}
       <div className="field-row">
-        <div className="field">
-          <label>License Plate</label>
-          <input value={vehicle.plate} onChange={(e) => onFieldChange("plate", e.target.value)} />
-        </div>
         <div className="field">
           <label>
             VIN{" "}
@@ -114,7 +124,7 @@ export default function VehicleForm({
             {vinStatus === "error" && <span className="vin-status err">not found</span>}
           </label>
           <input
-            value={vehicle.vin}
+            value={vehicle.vin || ""}
             onChange={(e) => {
               onFieldChange("vin", e.target.value);
               if (vinStatus) setVinStatus(null);
@@ -122,6 +132,15 @@ export default function VehicleForm({
             onBlur={handleVinBlur}
             placeholder="17-character VIN"
             maxLength={17}
+          />
+        </div>
+        <div className="field">
+          <label>Service Summary</label>
+          <input
+            value={serviceSummary}
+            onChange={(e) => onServiceSummaryChange?.(e.target.value)}
+            placeholder="Oil change + brake inspection"
+            maxLength={50}
           />
         </div>
       </div>
