@@ -156,9 +156,11 @@ export default function RepairOrderPage() {
   const { items: partsCatalog } = useCatalog("part");
   const { items: laborCatalog } = useCatalog("labor");
 
+  const GENERIC_CODES = ["part", "labor"];
+
   function findCatalogMatch(tag, code) {
     const q = (code || "").trim().toLowerCase();
-    if (!q) return null;
+    if (!q || GENERIC_CODES.includes(q)) return null;
     const list = tag === "LABOR" ? laborCatalog : partsCatalog;
     return list.find((it) => it.code.toLowerCase() === q) || null;
   }
