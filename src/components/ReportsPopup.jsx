@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Popup from "./button-row/Modal";
-import { getPaidInvoicesInRange, summarizeInvoices } from "../api/reports";
+import { getPaidInvoicesInRange, summarizeInvoices, getReportExtras } from "../api/reports";
+import { getShopSettings } from "../api/settings";
+import { printReport, openReportWindow } from "../lib/printReport";
 
 function money(n) {
   return "$" + Number(n || 0).toFixed(2);
@@ -97,6 +99,7 @@ export default function ReportsPopup({ isOpen, onClose }) {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [printing, setPrinting] = useState(false);
 
   const { start, end, label } = getRange(tab, dailyValue, weeklyValue, monthlyValue);
 
@@ -123,6 +126,27 @@ export default function ReportsPopup({ isOpen, onClose }) {
   }, [isOpen, tab, dailyValue, weeklyValue, monthlyValue]);
 
   const summary = summarizeInvoices(invoices);
+
+  /** Prints the period currently shown. The window has to be opened BEFORE
+   *  any await, or the browser blocks it as a popup. */
+  async function handlePrint() {
+    const win = openReportWindow();
+    if (!win) return;
+    setPrinting(true);
+    try {
+      const [extras, shop] = await Promise.all([
+        getReportExtras(start, end, invoices),
+        getShopSettings().catch(() => null),
+      ]);
+      printReport({ win, tab, rangeLabel: label, shop, summary, invoices, extras });
+    } catch (err) {
+      console.error("Failed to print report:", err);
+      setError("Failed to print report.");
+      if (win && !win.closed) win.close();
+    } finally {
+      setPrinting(false);
+    }
+  }
 
   const FIXED_METHODS = ["Cash", "Visa", "Mastercard", "American Express", "Discover", "ATM"];
   const fixedEntries = FIXED_METHODS.map((m) => [m, summary.byMethod[m] || 0]);
@@ -154,6 +178,14 @@ export default function ReportsPopup({ isOpen, onClose }) {
           <input type="month" value={monthlyValue} onChange={(e) => setMonthlyValue(e.target.value)} style={inputStyle} />
         )}
         <div style={{ fontSize: 13, color: "var(--muted)" }}>{label}</div>
+        <button
+          className="btn-small"
+          style={{ marginLeft: "auto", height: 36, padding: "0 18px" }}
+          onClick={handlePrint}
+          disabled={loading || printing || !!error}
+        >
+          {printing ? "Preparing…" : "Print Report"}
+        </button>
       </div>
 
       {loading ? (
